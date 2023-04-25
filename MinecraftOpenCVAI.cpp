@@ -46,7 +46,7 @@ int main()
 
         GetBitmapBits(hBitmap, width * height * 4, frame.data); // Copy the bitmap data to the frame object
         /*
-        std::string test = "face_detection_yunet_2022mar.onnx";
+        std::string test = "best.onnx";
         // Load the YOLOv5 ONNX model
         cv::dnn::Net net = cv::dnn::readNet(test);
 
