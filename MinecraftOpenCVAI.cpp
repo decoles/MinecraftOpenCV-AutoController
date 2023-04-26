@@ -2,6 +2,7 @@
 #include <fstream>
 #include <opencv2/opencv.hpp>
 #include <opencv2/highgui.hpp>
+#include "opencv2/imgproc.hpp"
 #include <opencv2/dnn.hpp>
 #include <Windows.h>
 #include <opencv2/dnn/all_layers.hpp>
@@ -15,22 +16,6 @@ using namespace std;
 using namespace cv;
 
 Mat returnImage();
-vector<Mat> pre_process(Mat& input_image, Net& net, int height, int width)
-{
-    // Convert to blob.
-    Mat blob;
-    blobFromImage(input_image, blob, 1.0 / 255., Size(height, width), Scalar(), true, false);
-
-    net.setInput(blob);
-
-    // Forward propagate.
-    vector<Mat> outputs;
-    net.forward(outputs, net.getUnconnectedOutLayersNames());
-
-    return outputs;
-}
-
-
 
 int main()
 {
@@ -40,17 +25,17 @@ int main()
     int fpsCounter = 0;
     time_t start = time(0);
 
-    vector<string> class_list;
-    ifstream ifs("coco.names");
+    //vector<string> class_list;
+    //ifstream ifs("coco.names");
     string line;
 
-    Net net;
-    net = readNet("yolov5s.onnx");
+    //Net net;
+   // net = readNet("yolov5s.onnx");
 
-    while (getline(ifs, line))
-    {
-        class_list.push_back(line);
-    }
+    //while (getline(ifs, line))
+   // {
+     //   class_list.push_back(line);
+   // }
 
     while (1)
     {
@@ -61,21 +46,44 @@ int main()
         int key = cv::waitKey(1);
         if (key == 27) // break if escape key is pressed
             break;
+        //cvtColor(img, img, COLOR_RGB2GRAY);
+        Mat img = frame.clone();
+        
+        //Mat img = imread("test.png", IMREAD_COLOR);
+        Mat templ = imread("creeperforward.jpg", IMREAD_GRAYSCALE);
+        cvtColor(img, img, COLOR_RGB2GRAY);
+        // Mat img = post_process(frame, detections, class_list);
+       // cout << templ.type() << " " << img.type() << " " << endl;
 
+        Mat imgDisplay;
+        img.copyTo(imgDisplay);
 
+        Mat result;
+        int result_cols = img.cols - templ.cols + 1;
+        int result_rows = img.rows - templ.rows + 1;
+        result.create(result_rows, result_cols, CV_32FC1);
+        try {
+            matchTemplate(img, templ, result, TM_CCOEFF_NORMED);
 
-        vector<Mat> detections;
-        detections = pre_process(frame, net, frame.size[0], frame.size[1]);
+            normalize(result, result, 0, 1, NORM_MINMAX, -1, Mat());
+            double minVal; double maxVal; Point minLoc; Point maxLoc;
+            Point matchLoc;
 
+            minMaxLoc(result, &minVal, &maxVal, &minLoc, &maxLoc, Mat());
 
+            matchLoc = maxLoc;
+            if (minVal > 0.1)
+            {
+                rectangle(img, matchLoc, Point(matchLoc.x + templ.cols, matchLoc.y + templ.rows), Scalar::all(0), 2, 8, 0);
 
+            }
 
-
-
-
-
-
-
+            //cout << maxVal << " " << minVal << endl;
+       }
+       catch(exception e)
+       {
+           cout << "no" << endl;
+       }
 
 
 
@@ -94,7 +102,7 @@ int main()
         //imshow("Game Window", cdstP); // Display the captured image
         //putText(frame, "test", Point(10, frame.rows / 2), FONT_HERSHEY_DUPLEX, 1.0, CV_RGB(118, 185, 0), 2);
 
-        imshow("Game Actual", frame);
+        imshow("Game Actual", img);
         counter++;
                 auto current_time = high_resolution_clock::now();
         auto elapsed_time = duration_cast<seconds>(current_time - start_time).count();

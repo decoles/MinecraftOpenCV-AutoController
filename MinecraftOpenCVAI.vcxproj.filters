@@ -26,4 +26,15 @@
     <None Include="mobilenetv2-10.onnx" />
     <None Include="yolov5s.onnx" />
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="sample.jpg">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="creeper.jpg">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="giant-creeper.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+  </ItemGroup>
 </Project>

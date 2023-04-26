@@ -147,6 +147,11 @@
     <None Include="mobilenetv2-10.onnx" />
     <None Include="yolov5s.onnx" />
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="creeper.jpg" />
+    <Image Include="giant-creeper.png" />
+    <Image Include="sample.jpg" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
