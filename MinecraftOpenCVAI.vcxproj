@@ -142,7 +142,10 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="best.onnx" />
+    <None Include="coco.names" />
     <None Include="face_detection_yunet_2022mar.onnx" />
+    <None Include="mobilenetv2-10.onnx" />
+    <None Include="yolov5s.onnx" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

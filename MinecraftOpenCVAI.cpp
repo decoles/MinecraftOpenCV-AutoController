@@ -9,12 +9,28 @@
 #include <time.h>
 #include <chrono>
 
-using namespace cv::dnn;
-using namespace std::chrono;
+using namespace cv::dnn; //OpenCV ML
+using namespace std::chrono; //Timing
 using namespace std;
 using namespace cv;
 
 Mat returnImage();
+vector<Mat> pre_process(Mat& input_image, Net& net, int height, int width)
+{
+    // Convert to blob.
+    Mat blob;
+    blobFromImage(input_image, blob, 1.0 / 255., Size(height, width), Scalar(), true, false);
+
+    net.setInput(blob);
+
+    // Forward propagate.
+    vector<Mat> outputs;
+    net.forward(outputs, net.getUnconnectedOutLayersNames());
+
+    return outputs;
+}
+
+
 
 int main()
 {
@@ -23,41 +39,43 @@ int main()
     Mat dst, cdst, cdstP;
     int fpsCounter = 0;
     time_t start = time(0);
+
+    vector<string> class_list;
+    ifstream ifs("coco.names");
+    string line;
+
+    Net net;
+    net = readNet("yolov5s.onnx");
+
+    while (getline(ifs, line))
+    {
+        class_list.push_back(line);
+    }
+
     while (1)
     {
-        keybd_event(0x57, 0, 0, 0);
+        //keybd_event(0x57, 0, 0, 0);
         Mat frame = returnImage();
-        /*
-        std::string test = "best.onnx";
-        // Load the YOLOv5 ONNX model
-        cv::dnn::Net net = cv::dnn::readNet(test);
-
-        // Set backend and target to use OpenCV's CPU backend
-        net.setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
-        net.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
-
-        cv::frame blob = cv::dnn::blobFromImage(frame, 1 / 255.0, cv::Size(128  , 212), cv::Scalar(),false, false);
-        net.setInput(blob);
-        if (blob.empty())
-        {
-            return -1;
-        }
-        try {
-        cv::frame output = net.forward();
-        // process output
-    } catch (const std::exception& ex) {
-        std::cerr << "Exception: " << ex.what() << std::endl;
-    }
-        //net.setInput(blob);
-
-       // cv::frame detection = net.forward();
-       */
-
 
         // Wait indefinitely for a key press
         int key = cv::waitKey(1);
         if (key == 27) // break if escape key is pressed
             break;
+
+
+
+        vector<Mat> detections;
+        detections = pre_process(frame, net, frame.size[0], frame.size[1]);
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -74,6 +92,8 @@ int main()
         //}
 
         //imshow("Game Window", cdstP); // Display the captured image
+        //putText(frame, "test", Point(10, frame.rows / 2), FONT_HERSHEY_DUPLEX, 1.0, CV_RGB(118, 185, 0), 2);
+
         imshow("Game Actual", frame);
         counter++;
                 auto current_time = high_resolution_clock::now();
@@ -93,6 +113,7 @@ int main()
     return 0;
 }
 
+//returnImage: 
 Mat returnImage()
 {
     HWND hwnd = FindWindow(NULL, L"Minecraft* 1.19.2 - Singleplayer");
