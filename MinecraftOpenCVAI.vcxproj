@@ -142,14 +142,16 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="best.onnx" />
-    <None Include="coco.names" />
+    <None Include="classes.txt" />
     <None Include="face_detection_yunet_2022mar.onnx" />
     <None Include="mobilenetv2-10.onnx" />
     <None Include="yolov5s.onnx" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="creeper.jpg" />
-    <Image Include="giant-creeper.png" />
+    <Image Include="giant-creeper.png">
+      <DeploymentContent>false</DeploymentContent>
+    </Image>
     <Image Include="sample.jpg" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
