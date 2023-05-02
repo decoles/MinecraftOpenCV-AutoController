@@ -133,6 +133,7 @@
       <ConformanceMode>true</ConformanceMode>
       <BasicRuntimeChecks>StackFrameRuntimeCheck</BasicRuntimeChecks>
       <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>C:\Users\David\Documents\Projects\mcCVProject\ConsoleApplication1\testImages;C:\Users\David\Documents\Projects\mcCVProject\ConsoleApplication1\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -144,7 +145,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="MinecraftOpenCVAI.cpp" />
-    <ClCompile Include="temp.cpp" />
+    <ClCompile Include="src\ModelDetections.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="best.onnx" />
@@ -154,11 +155,9 @@
     <None Include="yolov5s.onnx" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="creeper.jpg" />
-    <Image Include="giant-creeper.png">
-      <DeploymentContent>false</DeploymentContent>
-    </Image>
-    <Image Include="sample.jpg" />
+    <ClInclude Include="src\ModelDetections.h" />
+  </ItemGroup>
+  <ItemGroup>
     <Image Include="testImages\creeper.jpg" />
     <Image Include="testImages\creeperforward.jpg" />
     <Image Include="testImages\creeperLook.png" />

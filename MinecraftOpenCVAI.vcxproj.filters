@@ -21,7 +21,7 @@
     <ClCompile Include="MinecraftOpenCVAI.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="temp.cpp">
+    <ClCompile Include="src\ModelDetections.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -39,15 +39,11 @@
     <None Include="models\yolov5s.onnx" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="sample.jpg">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="creeper.jpg">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="giant-creeper.png">
-      <Filter>Resource Files</Filter>
-    </Image>
+    <ClInclude Include="src\ModelDetections.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
     <Image Include="testImages\creeper.jpg">
       <Filter>Resource Files</Filter>
     </Image>

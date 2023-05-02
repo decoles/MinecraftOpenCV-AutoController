@@ -6,6 +6,7 @@
 #include <opencv2/dnn.hpp>
 #include <Windows.h>
 #include <opencv2/dnn/all_layers.hpp>
+#include <ModelDetections.h>
 #include <string>
 #include <time.h>
 #include <chrono>
@@ -15,10 +16,40 @@ using namespace std::chrono; //Timing
 using namespace std;
 using namespace cv;
 
-const float THRESHOLD = 0.85;
+const float THRESHOLD = 0.85; //For match templage
 
 Mat returnImage();
 Mat returnMatchTemplate(Mat img, Mat templ);
+
+//debug code
+bool is_file_exist(const char* fileName)
+{
+    std::ifstream infile(fileName);
+    return infile.good();
+}
+
+string type2str(int type) {
+    string r;
+
+    uchar depth = type & CV_MAT_DEPTH_MASK;
+    uchar chans = 1 + (type >> CV_CN_SHIFT);
+
+    switch (depth) {
+    case CV_8U:  r = "8U"; break;
+    case CV_8S:  r = "8S"; break;
+    case CV_16U: r = "16U"; break;
+    case CV_16S: r = "16S"; break;
+    case CV_32S: r = "32S"; break;
+    case CV_32F: r = "32F"; break;
+    case CV_64F: r = "64F"; break;
+    default:     r = "User"; break;
+    }
+
+    r += "C";
+    r += (chans + '0');
+
+    return r;
+}
 
 
 int main()
@@ -29,28 +60,31 @@ int main()
     int fpsCounter = 0;
     time_t start = time(0);
 
-    //vector<string> class_list;
-    //ifstream ifs("coco.names");
     string line;
 
-    //Net net;
-   // net = readNet("yolov5s.onnx");
-
-    //while (getline(ifs, line))
-   // {
-     //   class_list.push_back(line);
-   // }
-    Mat templ = imread("creeperforward.jpg", IMREAD_GRAYSCALE);
-
+    Mat templ = imread("testImages/creeperforward.jpg", IMREAD_GRAYSCALE);
     Mat frame;
-    Mat img;
-
-    auto net = cv::dnn::readNet("best.onnx");
+    cout << is_file_exist("testImages/creeperforward.jpg");
+    Mat img = imread("testImages/sample.jpg");
+    std::vector<std::string> class_list = load_class_list();
+    const std::vector<cv::Scalar> colors = { cv::Scalar(255, 255, 0), cv::Scalar(0, 255, 0), cv::Scalar(0, 255, 255), cv::Scalar(255, 0, 0) };
+    bool is_cuda = true;
+    cv::dnn::Net net;
+    load_net(net, is_cuda);
+    frame = returnImage();
+    /*
+    string ty = type2str(img.type());
+    printf("Matrix: %s %dx%d \n", ty.c_str(), img.cols, img.rows);
+    cout << endl;
+    ty = type2str(frame.type());
+    printf("Matrix: %s %dx%d \n", ty.c_str(), frame.cols, frame.rows);
+    */
 
     while (1)
     {
         //keybd_event(0x57, 0, 0, 0);
         frame = returnImage();
+        frame = img.clone();
         //img = frame.clone();
         //img = returnMatchTemplate(frame.clone(), templ);
         // Wait indefinitely for a key press
@@ -60,13 +94,33 @@ int main()
 
         //Mat img = frame.clone();
 
-        //Mat img = imread("test.png", IMREAD_COLOR);
+        
 
-        //cvtColor(img, img, COLOR_RGB2GRAY);
+        cvtColor(frame, frame, COLOR_BGRA2BGR); //Go from 8UC4 to 8UC3
         // Mat img = post_process(frame, detections, class_list);
        // cout << templ.type() << " " << img.type() << " " << endl;
 
+       
 
+
+        std::vector<Detection> output;
+        detect(frame, net, output, class_list);
+
+        int detections = output.size();
+       // cout << detections << " DETECTIONS" << endl;
+
+        for (int i = 0; i < detections; ++i)
+        {
+
+            auto box = output[i].box;
+            auto classId = output[i].class_id;
+            const auto color = colors[classId % colors.size()];
+            cv::rectangle(frame, box, color, 3);
+
+            cv::rectangle(frame, cv::Point(box.x, box.y - 20), cv::Point(box.x + box.width, box.y), color, cv::FILLED);
+            cv::putText(frame, class_list[classId].c_str(), cv::Point(box.x, box.y - 5), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0));
+            
+        }
 
 
         // Canny(frame, dst, 50, 200, 3);
@@ -84,7 +138,7 @@ int main()
          //imshow("Game Window", cdstP); // Display the captured image
          //putText(frame, "test", Point(10, frame.rows / 2), FONT_HERSHEY_DUPLEX, 1.0, CV_RGB(118, 185, 0), 2);
 
-       // imshow("Game Actual", img);
+       imshow("Game Actual", frame);
         counter++;
         auto current_time = high_resolution_clock::now();
         auto elapsed_time = duration_cast<seconds>(current_time - start_time).count();
