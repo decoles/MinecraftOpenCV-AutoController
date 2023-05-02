@@ -41,7 +41,7 @@ int main()
      //   class_list.push_back(line);
    // }
     Mat templ = imread("creeperforward.jpg", IMREAD_GRAYSCALE);
-    
+
     Mat frame;
     Mat img;
 
@@ -136,6 +136,7 @@ Mat returnImage()
     return frame;
 }
 
+//Import frame and a template image to match to 
 Mat returnMatchTemplate(Mat img, Mat templ)
 {
     Mat result;
@@ -158,7 +159,6 @@ Mat returnMatchTemplate(Mat img, Mat templ)
     result.create(result_rows, result_cols, CV_32FC1);
     try {
         matchTemplate(img, templ, result, TM_CCOEFF_NORMED);
-
         //normalize(result, result, 0, 1, NORM_MINMAX, -1, Mat());
         double minVal; double maxVal; Point minLoc; Point maxLoc;
         Point matchLoc;

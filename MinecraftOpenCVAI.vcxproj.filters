@@ -13,18 +13,30 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Models">
+      <UniqueIdentifier>{f1dea67e-6bb3-4b58-8e35-66833d23621c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MinecraftOpenCVAI.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="temp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="face_detection_yunet_2022mar.onnx" />
-    <None Include="best.onnx" />
-    <None Include="classes.txt" />
-    <None Include="mobilenetv2-10.onnx" />
-    <None Include="yolov5s.onnx" />
+    <None Include="best.onnx">
+      <Filter>Models</Filter>
+    </None>
+    <None Include="yolov5s.onnx">
+      <Filter>Models</Filter>
+    </None>
+    <None Include="classes.txt">
+      <Filter>Models</Filter>
+    </None>
+    <None Include="models\best.onnx" />
+    <None Include="models\yolov5s.onnx" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="sample.jpg">
@@ -34,6 +46,27 @@
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="giant-creeper.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="testImages\creeper.jpg">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="testImages\creeperforward.jpg">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="testImages\creeperLook.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="testImages\giant-creeper.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="testImages\sample.jpg">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="testImages\test.PNG">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="testImages\zombie_test.jpg">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>
