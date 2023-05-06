@@ -1,17 +1,1 @@
-bee
-chicken
-cow
 creeper
-enderman
-fox
-frog
-ghast
-goat
-llama
-pig
-sheep
-skeleton
-spider
-turtle
-wolf
-zombie

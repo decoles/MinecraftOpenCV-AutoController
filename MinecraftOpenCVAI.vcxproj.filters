@@ -37,6 +37,7 @@
     </None>
     <None Include="models\best.onnx" />
     <None Include="models\yolov5s.onnx" />
+    <None Include="trainedCreeper.onnx" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\ModelDetections.h">
@@ -63,6 +64,9 @@
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="testImages\zombie_test.jpg">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="MatchTemplate\minecraftHeart.png">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>

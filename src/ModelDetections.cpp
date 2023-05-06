@@ -2,16 +2,16 @@
 
 const float INPUT_WIDTH = 640.0;
 const float INPUT_HEIGHT = 640.0;
-const float SCORE_THRESHOLD = 0.0;
+const float SCORE_THRESHOLD = 0.2;
 const float NMS_THRESHOLD = 0.4;
-const float CONFIDENCE_THRESHOLD = 0.0;
-const int DIMENSIONS = 17;
+const float CONFIDENCE_THRESHOLD = 0.4;
+const int DIMENSIONS = 6;
 const int ROWS = 25200;
 
 std::vector<std::string> load_class_list()
 {
     std::vector<std::string> class_list;
-    std::ifstream ifs("models/classes.txt");
+    std::ifstream ifs("classes.txt");
     std::string line;
     while (getline(ifs, line))
     {
@@ -22,14 +22,13 @@ std::vector<std::string> load_class_list()
 
 void load_net(cv::dnn::Net& net, bool is_cuda)
 {
-    auto result = cv::dnn::readNet("models/yolov5s.onnx");
+    auto result = cv::dnn::readNet("trainedCreeper.onnx");
     if (is_cuda)
     {
         std::cout << "Attempty to use CUDA\n";
         result.setPreferableBackend(cv::dnn::DNN_BACKEND_CUDA);
         result.setPreferableTarget(cv::dnn::DNN_TARGET_CUDA);
     }
-
     net = result;
 }
 
@@ -72,11 +71,8 @@ void detect(cv::Mat& image, cv::dnn::Net& net, std::vector<Detection>& output, c
             double max_class_score;
             minMaxLoc(scores, 0, &max_class_score, 0, &class_id);
             if (max_class_score > SCORE_THRESHOLD) {
-                std::cout << "PUSHING BACK VALID VALUE" << std::endl;
                 confidences.push_back(confidence);
-
                 class_ids.push_back(class_id.x);
-
                 float x = data[0];
                 float y = data[1];
                 float w = data[2];
@@ -87,11 +83,8 @@ void detect(cv::Mat& image, cv::dnn::Net& net, std::vector<Detection>& output, c
                 int height = int(h * y_factor);
                 boxes.push_back(cv::Rect(left, top, width, height));
             }
-
         }
-
         data += DIMENSIONS;
-
     }
 
     std::vector<int> nms_result;

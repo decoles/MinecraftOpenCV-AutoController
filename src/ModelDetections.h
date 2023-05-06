@@ -21,6 +21,4 @@ cv::Mat format_yolov5(const cv::Mat& source);
 void detect(cv::Mat& image, cv::dnn::Net& net, std::vector<Detection>& output, const std::vector<std::string>& className);
 
 
-
-
 #endif // !MODELDETECTIONS_H
