@@ -90,10 +90,10 @@ int main()
         //img = frame.clone();
         
         // Wait indefinitely for a key press
-        //int key = cv::waitKey(1);
-        //if (key == 27) // break if escape key is pressed
-           // break;
-        gameWindowFocus = true;
+        int key = cv::waitKey(1);
+        if (key == 27) // break if escape key is pressed
+            break;
+        //gameWindowFocus = true;
 
         if (gameWindowFocus) { //Main window foucs code
             cvtColor(frame, frame, COLOR_BGRA2BGR); //Go from 8UC4 to 8UC3
@@ -234,7 +234,7 @@ Mat returnMatchTemplate(Mat img, Mat templ)
 
     vector<vector<Point>> contours;
     findContours(resb, contours, RETR_LIST, CHAIN_APPROX_SIMPLE);
-    cout << contours.size() << endl;
+    //cout << contours.size() << endl;
     for (int i = 0; i < contours.size(); i++)
     {
         Mat1b mask(result.rows, result.cols, uchar(0));
