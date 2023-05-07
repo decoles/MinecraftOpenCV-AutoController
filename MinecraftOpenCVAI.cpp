@@ -18,40 +18,14 @@ using namespace std;
 using namespace cv;
 
 const float THRESHOLD = 0.85; //For match templage
+int frameHeight;
+int frameWidth;
+
 
 Mat returnImage(bool& val);
 Mat returnMatchTemplate(Mat img, Mat templ);
-
-//debug code
-bool is_file_exist(const char* fileName)
-{
-    std::ifstream infile(fileName);
-    return infile.good();
-}
-
-string type2str(int type) {
-    string r;
-
-    uchar depth = type & CV_MAT_DEPTH_MASK;
-    uchar chans = 1 + (type >> CV_CN_SHIFT);
-
-    switch (depth) {
-    case CV_8U:  r = "8U"; break;
-    case CV_8S:  r = "8S"; break;
-    case CV_16U: r = "16U"; break;
-    case CV_16S: r = "16S"; break;
-    case CV_32S: r = "32S"; break;
-    case CV_32F: r = "32F"; break;
-    case CV_64F: r = "64F"; break;
-    default:     r = "User"; break;
-    }
-
-    r += "C";
-    r += (chans + '0');
-
-    return r;
-}
-
+void detectBeings(Mat& frame, Net &net, std::vector<cv::Scalar> colors, std::vector<std::string> class_list);
+void MouseMove(int x, int y);
 
 int main()
 {
@@ -67,22 +41,17 @@ int main()
 
     std::vector<std::string> class_list = load_class_list();
     const std::vector<cv::Scalar> colors = { cv::Scalar(255, 255, 0), cv::Scalar(0, 255, 0), cv::Scalar(0, 255, 255), cv::Scalar(255, 0, 0) };
+
     bool is_cuda = true;
     cv::dnn::Net net;
     load_net(net, is_cuda);
+
     frame = returnImage(gameWindowFocus);
-    /*
-    string ty = type2str(img.type());
-    printf("Matrix: %s %dx%d \n", ty.c_str(), img.cols, img.rows);
-    cout << endl;
-    ty = type2str(frame.type());
-    printf("Matrix: %s %dx%d \n", ty.c_str(), frame.cols, frame.rows);
-    */
+
     Mat templ = imread("MatchTemplate/food.png");
     Mat img;
     while (1)
     {
-
         //keybd_event(0x57, 0, 0, 0);
         frame = returnImage(gameWindowFocus);
        // cout << "IS WINDOW IN FOCUS " << gameWindowFocus << endl;
@@ -98,28 +67,11 @@ int main()
         if (gameWindowFocus) { //Main window foucs code
             cvtColor(frame, frame, COLOR_BGRA2BGR); //Go from 8UC4 to 8UC3
 
-            std::vector<Detection> output;
-            detect(frame, net, output, class_list);
-            int detections = output.size();
-            for (int i = 0; i < detections; ++i)
-            {
-                auto box = output[i].box;
-                auto classId = output[i].class_id;
-                const auto color = colors[classId % colors.size()];
-                cv::rectangle(frame, box, color, 3);
-                cv::rectangle(frame, cv::Point(box.x, box.y - 20), cv::Point(box.x + box.width, box.y), color, cv::FILLED);
-                cv::putText(frame, class_list[classId].c_str(), cv::Point(box.x, box.y - 5), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0));
-                //cout << class_list[classId].c_str() << endl;
-                //keybd_event(0x57, 0, 0, 0);
-                //keybd_event(0x57, 0, KEYEVENTF_KEYUP, 0);
+            detectBeings(frame, net, colors, class_list);
 
-            }
-
-            frame = returnMatchTemplate(frame.clone(), templ);
-            //imshow("IMG", img);
-
-
-
+           
+            frame = returnMatchTemplate(frame.clone(), templ); //Find hunger
+            
             // Canny(frame, dst, 50, 200, 3);
              //cvtColor(dst, cdstP, COLOR_GRAY2BGR);
 
@@ -135,7 +87,8 @@ int main()
              //imshow("Game Window", cdstP); // Display the captured image
              //putText(
         }
-        cv::rectangle(frame, Point(240, 469), Point(605, 515), Scalar(0, 0, 0), 3);
+        cv::rectangle(frame, Point(0, 0), Point(frameWidth * 0.2, frameHeight * 0.3), Scalar(0, 0, 0), 3);
+        //cv::rectangle(frame, Point(240, 469), Point(605, 515), Scalar(0, 0, 0), 3); //For hotbar
         cv::putText(frame, "test", Point(0,0), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0));
         imshow("Game Actual", frame);
         
@@ -181,6 +134,8 @@ Mat returnImage(bool &val)
 
     int width = rect.right - rect.left;
     int height = rect.bottom - rect.top;
+    frameHeight = height;
+    frameWidth = width; // global variables
 
     //cout << "width: " << width << " " << "height: " << height << endl;
     
@@ -198,6 +153,7 @@ Mat returnImage(bool &val)
 
     GetBitmapBits(hBitmap, width * height * 4, frame.data); // Copy the bitmap data to the frame object
 
+    //cleanup
     DeleteObject(hBitmap);
     DeleteDC(hdcMem);
     ReleaseDC(hwnd, hdc);
@@ -207,7 +163,6 @@ Mat returnImage(bool &val)
 //Import frame and a template image to match to 
 Mat returnMatchTemplate(Mat img, Mat templ)
 {
-
     Mat3b img2 = img.clone();
     Mat3b templ2 = templ.clone();
 
@@ -244,7 +199,55 @@ Mat returnMatchTemplate(Mat img, Mat templ)
         minMaxLoc(result, &minVal, &maxVal, &minLoc, &maxLoc, mask);
         rectangle(img2, Rect(maxLoc.x, maxLoc.y, templ2.cols, templ2.rows), Scalar(0,255,0), 2);
     }
-
-
     return img2;
+}
+
+void detectBeings(Mat& frame, Net& net, std::vector<cv::Scalar> colors, std::vector<std::string> class_list)
+{
+    std::vector<Detection> output;
+    detect(frame, net, output, class_list);
+    int detections = output.size();
+    for (int i = 0; i < detections; ++i)
+    {
+        auto box = output[i].box;
+        auto classId = output[i].class_id;
+        const auto color = colors[classId % colors.size()];
+        cv::rectangle(frame, box, color, 3);
+        cv::rectangle(frame, cv::Point(box.x, box.y - 20), cv::Point(box.x + box.width, box.y), color, cv::FILLED);
+        circle(frame, Point2i(box.x + box.width/2, box.y + box.height/2), 5, Scalar(0, 125, 230), 4, 3);
+        circle(frame, Point2i(frameWidth / 2, frameHeight / 2), 5, Scalar(0, 125, 230), 4, 3);
+
+        int centerX = box.x + box.width / 2;
+        int centerY = box.y + box.height / 2;
+        cv::putText(frame, class_list[classId].c_str(), cv::Point(box.x, box.y - 5), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0));
+        //cout << class_list[classId].c_str() << endl;
+        //keybd_event(0x57, 0, 0, 0);
+        //keybd_event(0x57, 0, KEYEVENTF_KEYUP, 0);
+        //MouseMove(box.x, box.y);
+        //MouseMove(box.x, box.y);
+        //cout << "x " << box.x << " y " << box.y << endl;
+        if (centerX > frameWidth/2)
+        {
+            MouseMove(1, 0);
+        }
+        if (centerX < frameWidth/2)
+        {
+            MouseMove(-1, 0);
+        }
+    }
+}
+
+void MouseMove(int x, int y)
+{
+    double fScreenWidth = ::GetSystemMetrics(SM_CXSCREEN) - 1;
+    double fScreenHeight = ::GetSystemMetrics(SM_CYSCREEN) - 1;
+    double fx = x * (65535.0f / fScreenWidth);
+    double fy = y * (65535.0f / fScreenHeight);
+    cout << "FX " << fx << " FY " << fy << endl;
+    INPUT Input = { 0 };
+    Input.type = INPUT_MOUSE;
+    Input.mi.dwFlags = MOUSEEVENTF_MOVE;
+    Input.mi.dx = fx;
+    Input.mi.dy = fy;
+    ::SendInput(1, &Input, sizeof(INPUT));
 }
