@@ -25,7 +25,6 @@ void load_net(cv::dnn::Net& net, bool is_cuda)
     auto result = cv::dnn::readNet("trainedCreeper.onnx");
     if (is_cuda)
     {
-        std::cout << "Attempty to use CUDA\n";
         result.setPreferableBackend(cv::dnn::DNN_BACKEND_CUDA);
         result.setPreferableTarget(cv::dnn::DNN_TARGET_CUDA);
     }

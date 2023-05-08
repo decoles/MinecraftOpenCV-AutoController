@@ -156,6 +156,7 @@
     <None Include="yolov5s.onnx" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\KeySimulation.h" />
     <ClInclude Include="src\ModelDetections.h" />
   </ItemGroup>
   <ItemGroup>
