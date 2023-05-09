@@ -19,28 +19,26 @@ using namespace std::chrono; //Timing
 using namespace std;
 using namespace cv;
 
-const float THRESHOLD = 0.85; //For match templage
-int frameHeight;
-int frameWidth;
-
 enum MODES
 {
-    PATHING = 0,
-    FIGHT = 1,
-    MINE = 2,
-    HARVEST = 3,
-    NONE = 4,
+    NONE = 0,
+    PATHING = 1,
+    FIGHT = 2,
+    MINE = 3,
+    HARVEST = 4,
+    SENTRY = 5,
 };
 
-vector<string>MODENAMES = {"PATHING, FIGHT", "MINE", "HARVEST", "NONE"};
+vector<string>MODENAMES = { "NONE", "PATHING, FIGHT", "MINE", "HARVEST", "SENTRY" };
 
-int CURRENTMODE = NONE;
-
+const float THRESHOLD = 0.85; //For match templage
+int frameHeight, frameWidth, CURRENTMODE = NONE;
 
 Mat returnImage(bool& val);
 Mat returnMatchTemplate(Mat img, Mat templ, int& food);
 void detectBeings(Mat& frame, Net &net, std::vector<cv::Scalar> colors, std::vector<std::string> class_list);
-DWORD WINAPI thred(__in LPVOID lpParameter)
+
+DWORD WINAPI thred(__in LPVOID lpParameter) //Testing multithread in windows
 {
     KeyActionDown(VK_SPACE);
     Sleep(1);
@@ -50,32 +48,29 @@ DWORD WINAPI thred(__in LPVOID lpParameter)
 
 int main()
 {
-    bool gameWindowFocus = false;
-    int counter = 0;
+    bool gameWindowFocus = false, is_cuda = true;
+    int counter = 0, fpsCounter = 0, timePassed = 0, currentFood = 0, timePassedKeyPress = 0;
     auto start_time = high_resolution_clock::now();
-    int fpsCounter = 0;
-    time_t start = time(0);
+    auto keyPressTimer = high_resolution_clock::now();
+    time_t start = time(0), KeyPressStart = time(0);
     unsigned int diffsum, maxdiff;
     double percent_diff;
-    Mat matGray, matDiff, matGrayPrev;
+    Mat matGray, matDiff, matGrayPrev, frame;
     string line;
-    Mat frame;
-    int timePassed = 0;
-    int currentFood = 0;
     std::vector<std::string> class_list = load_class_list();
     const std::vector<cv::Scalar> colors = { cv::Scalar(255, 255, 0), cv::Scalar(0, 255, 0), cv::Scalar(0, 255, 255), cv::Scalar(255, 0, 0) };
-    bool is_cuda = true;
+
     cv::dnn::Net net;
     load_net(net, is_cuda);
     
-    frame = returnImage(gameWindowFocus);
+    frame = returnImage(gameWindowFocus); //initial frame
+    //Inital diff frame TODO get unstuck with diff
     cvtColor(frame, matGray, COLOR_BGR2GRAY);
-
     matDiff = matGray.clone();
     matGrayPrev = matGray.clone();
-
     maxdiff = (matDiff.cols) * (matDiff.rows) * 255;
-    Mat templ = imread("MatchTemplate/food.png");
+
+    Mat templ = imread("MatchTemplate/food.png"); //For telling how much food exists
     Mat img;
     bool KeyFlag = true;
 
@@ -84,46 +79,47 @@ int main()
 
     while (1)
     {
-        if (GetAsyncKeyState('X') & 0x8000 && KeyFlag == true)
+        if (GetAsyncKeyState('X') & 0x8000 && KeyFlag == true) //Press X key to change working state VERY FINICKY
         {
             KeyFlag = false;
-            if (CURRENTMODE == 4)
+            if (CURRENTMODE == 5)
                 CURRENTMODE = 0;
             else
                 CURRENTMODE++; 
-
-            //cout << "Current Mode Switch To: " << MODENAMES[CURRENTMODE] << endl ;
-
+            cout << "CURRENT MODDE: " << CURRENTMODE << endl;
+            KeyActionUp(0x57);
+            KeyActionUp(VK_SPACE);
         }
-        //Sleep(5000);
         frame = returnImage(gameWindowFocus);
         // Wait indefinitely for a key press
         int key = cv::waitKey(1);
         if (key == 27) // break if escape key is pressed
             break;
         //gameWindowFocus = true;
+
+        //DOWN SCALE AND USE FRAME
         cvtColor(frame, frame, COLOR_BGRA2BGR); //Go from 8UC4 to 8UC3
         resize(frame, frame, Size(960, 540), INTER_LINEAR);
 
         //cvtColor(frame, matGray, COLOR_BGR2GRAY);
         //absdiff(matGrayPrev, matGray, matDiff);
-
         //diffsum = (unsigned int)sum(matDiff)[0];
-
        // percent_diff = ((double)diffsum / (double)maxdiff) * 100;
-
         //cout << percent_diff << endl;
 
-        if (gameWindowFocus) { //Main window foucs code
+        if (gameWindowFocus) { //Main window foucs
+            if (CURRENTMODE == NONE)
+            {
+                //cv::putText(frame, "NO MODE SELECTED", Point(0, 0), cv::FONT_HERSHEY_SIMPLEX, 3, cv::Scalar(255, 255, 0));
+
+                 //HANDLE myhandle = CreateThread(0, 0, thred, 0, 0 ,&myThreadID);
+
+            }
             if (CURRENTMODE == PATHING)
             {
                 KeyActionDown(0x57);
                 KeyActionDown(VK_SPACE);
                 detectBeings(frame, net, colors, class_list);
-            }
-            else if (CURRENTMODE == MINE)
-            {
-                
             }
             else if (CURRENTMODE == FIGHT)
             {
@@ -132,26 +128,24 @@ int main()
 
 
             }
+            else if (CURRENTMODE == MINE)
+            {
+                
+            }
+
             else if (CURRENTMODE == HARVEST)
             {
 
             }
-            else if (CURRENTMODE == NONE)
+            else if(CURRENTMODE == SENTRY)
             {
-                cv::putText(frame, "NO MODE SELECTED", Point(0, 0), cv::FONT_HERSHEY_SIMPLEX, 3, cv::Scalar(255, 255, 0));
-
-               //HANDLE myhandle = CreateThread(0, 0, thred, 0, 0 ,&myThreadID);
-
+                
             }
-               //SpacebarAction();
-
-            //detectBeings(frame, net, colors, class_list);
             frame = returnMatchTemplate(frame.clone(), templ, currentFood); //Find hunger
+            //detectBeings(frame, net, colors, class_list);
 
-            cout << currentFood << endl;
-             //putText(
         }
-        cv::rectangle(frame, Point(0, 0), Point(frameWidth * 0.2, frameHeight * 0.3), Scalar(0, 0, 0), 3);
+        //cv::rectangle(frame, Point(0, 0), Point(frameWidth * 0.2, frameHeight * 0.3), Scalar(0, 0, 0), 3);
         //cv::rectangle(frame, Point(240, 469), Point(605, 515), Scalar(0, 0, 0), 3); //For hotbar
         imshow("Game Actual", frame);
         //imshow("diff", matDiff);
@@ -163,20 +157,13 @@ int main()
 
         if (elapsed_time >= 1) {
             cout << "Loop completed " << counter << " times in " << elapsed_time << " seconds." << endl;
-            timePassed++; //Increments each second up to 3 seconds;
-            if (timePassed >= 1)
-                timePassed = 0;
             KeyFlag = true; //Resets keypress timer so it dosent get spammed
-            //KeyActionUp(0x57);
-           // KeyActionUp(VK_SPACE);
-
-
-            counter = 0;
+            counter = 0; //For fps counter
             start_time = current_time;
         }
+
+
     }
-
-
     return 0;
 }
 
@@ -184,16 +171,10 @@ int main()
 Mat returnImage(bool &val)
 {
     HWND hwnd = FindWindow(NULL, L"Minecraft* 1.19.2 - Singleplayer");
+    HWND temp = GetForegroundWindow(); //Gets current window for comparing to needed window
 
-    HWND temp = GetForegroundWindow();
-    int len = GetWindowTextLength(temp) + 1;
-    LPTSTR title = new TCHAR[len];
-    GetWindowText(temp, title, len);
     if (hwnd == temp)//Window Focus
-    {
-        //cout << "same window" << endl;
         val = true; //Sets true if window is in focus so controls dont interact with the system.
-    }
     else
         val = false;
 
@@ -204,10 +185,9 @@ Mat returnImage(bool &val)
 
     int width = rect.right - rect.left;
     int height = rect.bottom - rect.top;
+    // global variables for current frame dimensions
     frameHeight = height;
-    frameWidth = width; // global variables
-
-    //cout << "width: " << width << " " << "height: " << height << endl;
+    frameWidth = width; 
     
     HDC hdcMem = CreateCompatibleDC(hdc); // Create a compatible device context
     HBITMAP hBitmap = CreateCompatibleBitmap(hdc, width, height); // Create a compatible bitmap
@@ -221,7 +201,8 @@ Mat returnImage(bool &val)
     // Create a new frame object to store the captured image, unsinged int 8bit four channels
     Mat frame(height, width, CV_8UC4);
 
-    GetBitmapBits(hBitmap, width * height * 4, frame.data); // Copy the bitmap data to the frame object
+    // Copy the bitmap data to the frame object
+    GetBitmapBits(hBitmap, width * height * 4, frame.data); 
 
     //cleanup
     DeleteObject(hBitmap);
@@ -260,7 +241,6 @@ Mat returnMatchTemplate(Mat img, Mat templ, int &food)
 
     vector<vector<Point>> contours;
     findContours(resb, contours, RETR_LIST, CHAIN_APPROX_SIMPLE);
-    //cout << contours.size() << endl;
     for (int i = 0; i < contours.size(); i++)
     {
         Mat1b mask(result.rows, result.cols, uchar(0));
@@ -289,20 +269,12 @@ void detectBeings(Mat& frame, Net& net, std::vector<cv::Scalar> colors, std::vec
         circle(frame, Point2i(box.x + box.width/2, box.y + box.height/2), 5, Scalar(0, 125, 230), 4, 3); //Center enemy
         circle(frame, Point2i(frameWidth / 2, frameHeight / 2), 5, Scalar(0, 125, 230), 4, 3); //Center screen
         cv::putText(frame, class_list[classId].c_str(), cv::Point(box.x, box.y - 5), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0));
-        //cout << class_list[classId].c_str() << endl;
-        //keybd_event(0x57, 0, 0, 0);
-        //keybd_event(0x57, 0, KEYEVENTF_KEYUP, 0);
-        //MouseMove(box.x, box.y);
-        //MouseMove(box.x, box.y);
-        //cout << "x " << box.x << " y " << box.y << endl;
 
         int centerX = box.x + box.width / 2;
         int centerY = box.y + box.height / 2;
         if (CURRENTMODE == PATHING || CURRENTMODE == MINE || CURRENTMODE == HARVEST)
         {
-
-                MouseMove(5, 0);
-   
+            MouseMove(5, 0);
         }
         else if (CURRENTMODE == FIGHT)
         {

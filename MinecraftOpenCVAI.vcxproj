@@ -150,10 +150,7 @@
   <ItemGroup>
     <None Include="best.onnx" />
     <None Include="classes.txt" />
-    <None Include="models\best.onnx" />
-    <None Include="models\yolov5s.onnx" />
     <None Include="trainedCreeper.onnx" />
-    <None Include="yolov5s.onnx" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\KeySimulation.h" />

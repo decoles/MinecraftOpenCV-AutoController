@@ -29,14 +29,9 @@
     <None Include="best.onnx">
       <Filter>Models</Filter>
     </None>
-    <None Include="yolov5s.onnx">
-      <Filter>Models</Filter>
-    </None>
     <None Include="classes.txt">
       <Filter>Models</Filter>
     </None>
-    <None Include="models\best.onnx" />
-    <None Include="models\yolov5s.onnx" />
     <None Include="trainedCreeper.onnx" />
   </ItemGroup>
   <ItemGroup>
