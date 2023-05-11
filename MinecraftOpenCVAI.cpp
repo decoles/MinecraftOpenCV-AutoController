@@ -32,7 +32,7 @@ enum MODES
 vector<string>MODENAMES = { "NONE", "PATHING, FIGHT", "MINE", "HARVEST", "SENTRY" };
 
 const float THRESHOLD = 0.85; //For match templage
-int frameHeight, frameWidth, CURRENTMODE = NONE;
+int frameHeight = 540, frameWidth = 960, CURRENTMODE = NONE;
 
 Mat returnImage(bool& val);
 Mat returnMatchTemplate(Mat img, Mat templ, int& food);
@@ -95,6 +95,7 @@ int main()
         int key = cv::waitKey(1);
         if (key == 27) // break if escape key is pressed
             break;
+
         //gameWindowFocus = true;
 
         //DOWN SCALE AND USE FRAME
@@ -141,7 +142,7 @@ int main()
             {
                 
             }
-            frame = returnMatchTemplate(frame.clone(), templ, currentFood); //Find hunger
+            //frame = returnMatchTemplate(frame.clone(), templ, currentFood); //Find hunger
             //detectBeings(frame, net, colors, class_list);
 
         }
@@ -186,8 +187,8 @@ Mat returnImage(bool &val)
     int width = rect.right - rect.left;
     int height = rect.bottom - rect.top;
     // global variables for current frame dimensions
-    frameHeight = height;
-    frameWidth = width; 
+    //frameHeight = height;
+    //frameWidth = width; 
     
     HDC hdcMem = CreateCompatibleDC(hdc); // Create a compatible device context
     HBITMAP hBitmap = CreateCompatibleBitmap(hdc, width, height); // Create a compatible bitmap

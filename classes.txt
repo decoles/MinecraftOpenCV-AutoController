@@ -1,1 +1,4 @@
 creeper
+skeleton
+spider
+zombie

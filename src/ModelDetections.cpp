@@ -5,7 +5,7 @@ const float INPUT_HEIGHT = 640.0;
 const float SCORE_THRESHOLD = 0.2;
 const float NMS_THRESHOLD = 0.4;
 const float CONFIDENCE_THRESHOLD = 0.4;
-const int DIMENSIONS = 6;
+const int DIMENSIONS = 9;
 const int ROWS = 25200;
 
 //Reads class list line by line and loads it into vector
@@ -24,7 +24,7 @@ std::vector<std::string> load_class_list()
 //Loads the model and determines if CUDA will be used or not
 void load_net(cv::dnn::Net& net, bool is_cuda)
 {
-    auto result = cv::dnn::readNet("trainedCreeper.onnx");
+    auto result = cv::dnn::readNet("fourEnemies.onnx");
     if (is_cuda) //In case I want to use cpu later
     {
         result.setPreferableBackend(cv::dnn::DNN_BACKEND_CUDA);
