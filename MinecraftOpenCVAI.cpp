@@ -29,37 +29,48 @@ enum MODES
     SENTRY = 5,
 };
 
-vector<string>MODENAMES = { "NONE", "PATHING, FIGHT", "MINE", "HARVEST", "SENTRY" };
+enum KEYS
+{
+    ONE = 0x31,
+    TWO = 0x32,
+    THREE = 0x33,
+    FOUR = 0x34,
+
+};
+
+vector<string>MODENAMES = { "NONE", "PATHING", "FIGHT", "MINE", "HARVEST", "SENTRY" };
 
 const float THRESHOLD = 0.85; //For match templage
 int frameHeight = 540, frameWidth = 960, CURRENTMODE = NONE;
 
 Mat returnImage(bool& val);
-Mat returnMatchTemplate(Mat img, Mat templ, int& food);
-void detectBeings(Mat& frame, Net &net, std::vector<cv::Scalar> colors, std::vector<std::string> class_list);
+void returnMatchTemplate(Mat img, Mat templ, int& food, vector<Rect>& foodOutline);
+void detectBeingsAttack(Mat& frame, Net &net, std::vector<cv::Scalar> colors, std::vector<std::string> class_list);
+void detectBeingsAvoidance(Mat& frame, Net& net, std::vector<cv::Scalar> colors, std::vector<std::string> class_list);
 
 DWORD WINAPI thred(__in LPVOID lpParameter) //Testing multithread in windows
 {
-    KeyActionDown(VK_SPACE);
-    Sleep(1);
-    KeyActionUp(VK_SPACE);
+    MouseRightClickAndHold();
+   // KeyActionDown(0x33);//3 key
+    //Sleep(1);
+    //KeyActionUp(0x33);
     return 0;
 }
 
 int main()
 {
     bool gameWindowFocus = false, is_cuda = true;
-    int counter = 0, fpsCounter = 0, timePassed = 0, currentFood = 0, timePassedKeyPress = 0;
+    int counter = 0, fpsCounter = 0, timePassed = 0, currentFood = 0, foodTimeCounter = 0;
     auto start_time = high_resolution_clock::now();
-    auto keyPressTimer = high_resolution_clock::now();
-    time_t start = time(0), KeyPressStart = time(0);
+    auto FoodTimer = high_resolution_clock::now();
+    time_t start = time(0), FoodTimeStart = time(0);
     unsigned int diffsum, maxdiff;
     double percent_diff;
     Mat matGray, matDiff, matGrayPrev, frame;
     string line;
     std::vector<std::string> class_list = load_class_list();
     const std::vector<cv::Scalar> colors = { cv::Scalar(255, 255, 0), cv::Scalar(0, 255, 0), cv::Scalar(0, 255, 255), cv::Scalar(255, 0, 0) };
-
+    vector<Rect> foodOutline;
     cv::dnn::Net net;
     load_net(net, is_cuda);
     
@@ -74,21 +85,22 @@ int main()
     Mat img;
     bool KeyFlag = true;
 
-    DWORD myThreadID;
-
+    DWORD dwThreadId;
+    static HANDLE hThread = NULL;
 
     while (1)
     {
-        if (GetAsyncKeyState('X') & 0x8000 && KeyFlag == true) //Press X key to change working state VERY FINICKY
+        if (GetKeyState('X') & 0x8000 && KeyFlag == true) //Press X key to change working state VERY FINICKY
         {
             KeyFlag = false;
             if (CURRENTMODE == 5)
                 CURRENTMODE = 0;
             else
                 CURRENTMODE++; 
-            cout << "CURRENT MODDE: " << CURRENTMODE << endl;
+            cout << "CURRENT MODDE: " << MODENAMES[CURRENTMODE] << endl;
             KeyActionUp(0x57);
             KeyActionUp(VK_SPACE);
+            MouseLeftClickUp();
         }
         frame = returnImage(gameWindowFocus);
         // Wait indefinitely for a key press
@@ -111,27 +123,21 @@ int main()
         if (gameWindowFocus) { //Main window foucs
             if (CURRENTMODE == NONE)
             {
-                //cv::putText(frame, "NO MODE SELECTED", Point(0, 0), cv::FONT_HERSHEY_SIMPLEX, 3, cv::Scalar(255, 255, 0));
-
-                 //HANDLE myhandle = CreateThread(0, 0, thred, 0, 0 ,&myThreadID);
-
+                cv::putText(frame, "NO MODE SELECTED", Point(50, 50), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(255, 255, 255));
             }
             if (CURRENTMODE == PATHING)
             {
                 KeyActionDown(0x57);
                 KeyActionDown(VK_SPACE);
-                detectBeings(frame, net, colors, class_list);
+                detectBeingsAvoidance(frame, net, colors, class_list);
             }
             else if (CURRENTMODE == FIGHT)
             {
-                KeyActionDown(0x57);
-                detectBeings(frame, net, colors, class_list);
-
-
+                detectBeingsAttack(frame, net, colors, class_list);
             }
             else if (CURRENTMODE == MINE)
             {
-                
+                //MouseLeftClick();
             }
 
             else if (CURRENTMODE == HARVEST)
@@ -145,26 +151,67 @@ int main()
             //frame = returnMatchTemplate(frame.clone(), templ, currentFood); //Find hunger
             //detectBeings(frame, net, colors, class_list);
 
+            //Only feed if window is in focus
+            auto currentTimeFood = high_resolution_clock::now();
+            auto foodElapseTime = duration_cast<seconds>(currentTimeFood - FoodTimer).count();
+            if (foodElapseTime >= 3)
+            {
+                returnMatchTemplate(frame.clone(), templ, currentFood, foodOutline); //Find hunger and get shape
+                FoodTimer = currentTimeFood;
+                if (currentFood > 0) //Dont want this happening if the food level is gone or character is dead
+                {
+                    if (currentFood <= 8 && hThread == NULL)
+                    {
+                        hThread = CreateThread(NULL, 0, thred, NULL, 0, &dwThreadId);
+                    }
+                    if (currentFood >= 9 && hThread != NULL) //If thread is occupied and food is good cancel thread
+                    {
+                        CloseHandle(hThread);
+                        hThread = NULL;
+                    }
+                }
+            }
+            if (foodOutline.size() > 0)
+            {
+                for (int k = 0; k < foodOutline.size(); k++)
+                {
+                    rectangle(frame, Rect(foodOutline[k].x, foodOutline[k].y, foodOutline[k].height, foodOutline[k].width), Scalar(0, 255, 0), 2);
+                }
+            }
         }
+        else
+        {
+            KeyActionUp(0x57);
+            KeyActionUp(VK_SPACE);
+            MouseLeftClickUp();
+            CloseHandle(hThread);
+
+        }
+        
+        
         //cv::rectangle(frame, Point(0, 0), Point(frameWidth * 0.2, frameHeight * 0.3), Scalar(0, 0, 0), 3);
         //cv::rectangle(frame, Point(240, 469), Point(605, 515), Scalar(0, 0, 0), 3); //For hotbar
         imshow("Game Actual", frame);
         //imshow("diff", matDiff);
-        counter++;
-        auto current_time = high_resolution_clock::now();
-        auto elapsed_time = duration_cast<seconds>(current_time - start_time).count();
+
         //matGrayPrev = matGray.clone();
         //cout << percent_diff << endl;
 
+  
+        
+
+
+        counter++;
+        auto current_time = high_resolution_clock::now();
+        auto elapsed_time = duration_cast<seconds>(current_time - start_time).count();
         if (elapsed_time >= 1) {
             cout << "Loop completed " << counter << " times in " << elapsed_time << " seconds." << endl;
             KeyFlag = true; //Resets keypress timer so it dosent get spammed
             counter = 0; //For fps counter
             start_time = current_time;
         }
-
-
     }
+    //
     return 0;
 }
 
@@ -211,9 +258,8 @@ Mat returnImage(bool &val)
     ReleaseDC(hwnd, hdc);
     return frame;
 }
-
 //Import frame and a template image to match to 
-Mat returnMatchTemplate(Mat img, Mat templ, int &food)
+void returnMatchTemplate(Mat img, Mat templ, int &food, vector<Rect> &foodOutline)
 {
     food = 0;
     Mat3b img2 = img.clone();
@@ -249,13 +295,13 @@ Mat returnMatchTemplate(Mat img, Mat templ, int &food)
         double minVal; double maxVal; Point minLoc; Point maxLoc;
         Point matchLoc;
         minMaxLoc(result, &minVal, &maxVal, &minLoc, &maxLoc, mask);
-        rectangle(img2, Rect(maxLoc.x, maxLoc.y, templ2.cols, templ2.rows), Scalar(0,255,0), 2);
+        //rectangle(img2, Rect(maxLoc.x, maxLoc.y, templ2.cols, templ2.rows), Scalar(0,255,0), 2);
         food++;
+        foodOutline.push_back(Rect(maxLoc.x, maxLoc.y, templ2.cols, templ2.rows)); //get the boxes around the food showing all the time
     }
-    return img2;
 }
 
-void detectBeings(Mat& frame, Net& net, std::vector<cv::Scalar> colors, std::vector<std::string> class_list)
+void detectBeingsAttack(Mat& frame, Net& net, std::vector<cv::Scalar> colors, std::vector<std::string> class_list)
 {
     std::vector<Detection> output;
     detect(frame, net, output, class_list);
@@ -270,6 +316,60 @@ void detectBeings(Mat& frame, Net& net, std::vector<cv::Scalar> colors, std::vec
         circle(frame, Point2i(box.x + box.width/2, box.y + box.height/2), 5, Scalar(0, 125, 230), 4, 3); //Center enemy
         circle(frame, Point2i(frameWidth / 2, frameHeight / 2), 5, Scalar(0, 125, 230), 4, 3); //Center screen
         cv::putText(frame, class_list[classId].c_str(), cv::Point(box.x, box.y - 5), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0));
+        int centerX = box.x + box.width / 2;
+        int centerY = box.y + box.height / 2;
+        //cout << box.height << " BOX HEIGHT" << endl;
+        //cout << frameHeight << " FRAME HEIGHT " << endl;
+        float upperBound = frameHeight - (frameHeight * .30);
+        //When in creatures face stop and attack
+        if (upperBound < box.height)
+        {
+            MouseLeftClick();
+            KeyActionUp(0x57); //Stop running
+            KeyActionUp(VK_SPACE);
+
+        }
+        else
+        {
+            MouseLeftClickUp(); //cancel input
+            KeyActionDown(0x57);
+            KeyActionDown(VK_SPACE);
+        }
+            if (centerX > frameWidth / 2)
+            {
+                MouseMove(2, 0);
+            }
+            if (centerX < frameWidth / 2)
+            {
+                MouseMove(-2, 0);
+            }
+            if (centerY > frameHeight / 2)
+            {
+                MouseMove(0, 1);
+            }
+            if (centerY < frameHeight / 2)
+            {
+                MouseMove(0, -1);
+            }
+        
+    }
+}
+
+void detectBeingsAvoidance(Mat& frame, Net& net, std::vector<cv::Scalar> colors, std::vector<std::string> class_list)
+{
+    std::vector<Detection> output;
+    detect(frame, net, output, class_list);
+    int detections = output.size();
+    for (int i = 0; i < detections; ++i)
+    {
+        auto box = output[i].box;
+        auto classId = output[i].class_id;
+        const auto color = colors[classId % colors.size()];
+        cv::rectangle(frame, box, color, 3);
+        cv::rectangle(frame, cv::Point(box.x, box.y - 20), cv::Point(box.x + box.width, box.y), color, cv::FILLED);
+        circle(frame, Point2i(box.x + box.width / 2, box.y + box.height / 2), 5, Scalar(0, 125, 230), 4, 3); //Center enemy
+        circle(frame, Point2i(frameWidth / 2, frameHeight / 2), 5, Scalar(0, 125, 230), 4, 3); //Center screen
+        cv::putText(frame, class_list[classId].c_str(), cv::Point(box.x, box.y - 5), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0));
 
         int centerX = box.x + box.width / 2;
         int centerY = box.y + box.height / 2;
@@ -281,11 +381,11 @@ void detectBeings(Mat& frame, Net& net, std::vector<cv::Scalar> colors, std::vec
         {
             if (centerX > frameWidth / 2)
             {
-                MouseMove(1, 0);
+                MouseMove(2, 0);
             }
-            if (centerX < frameWidth / 2)
+            if(centerX < frameWidth / 2)
             {
-                MouseMove(-1, 0);
+                MouseMove(-2, 0);
             }
             if (centerY > frameHeight / 2)
             {

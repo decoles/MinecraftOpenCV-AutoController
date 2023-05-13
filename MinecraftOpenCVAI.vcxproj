@@ -155,6 +155,7 @@
   <ItemGroup>
     <ClInclude Include="src\KeySimulation.h" />
     <ClInclude Include="src\ModelDetections.h" />
+    <ClInclude Include="src\Modes.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="MatchTemplate\minecraftHeart.png" />

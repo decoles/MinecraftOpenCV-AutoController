@@ -19,6 +19,41 @@ void MouseMove(int x, int y)
     Input.mi.dy = fy;
     ::SendInput(1, &Input, sizeof(INPUT));
 }
+void MouseRightClickAndHold()
+{
+    INPUT Input = { 0 };
+    Input.type = INPUT_MOUSE;
+    Input.mi.dwFlags = MOUSEEVENTF_RIGHTDOWN;
+    SendInput(1, &Input, sizeof(INPUT));
+    Sleep(4000);
+    Input.mi.dwFlags = MOUSEEVENTF_RIGHTUP;
+    SendInput(1, &Input, sizeof(INPUT));
+}
+
+void MouseLeftClick()
+{
+    INPUT Input = { 0 };
+    Input.type = INPUT_MOUSE;
+    Input.mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+    ::SendInput(1, &Input, sizeof(INPUT));
+}
+
+void MouseLeftClickUp()
+{
+    INPUT Input = { 0 };
+    Input.type = INPUT_MOUSE;
+    Input.mi.dwFlags = MOUSEEVENTF_LEFTUP;
+    ::SendInput(1, &Input, sizeof(INPUT));
+}
+
+void MouseRightClick()
+{
+    INPUT Input = { 0 };
+    Input.type = INPUT_MOUSE;
+    Input.mi.dwFlags = MOUSEEVENTF_RIGHTDOWN;
+    ::SendInput(1, &Input, sizeof(INPUT));
+}
+
 
 void KeyActionDown(int key)
 {
