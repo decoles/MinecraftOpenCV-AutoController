@@ -43,7 +43,7 @@ cv::Mat format_yolov5(const cv::Mat& source) {
     return result;
 }
 
-void detect(cv::Mat& image, cv::dnn::Net& net, std::vector<Detection>& output, const std::vector<std::string>& className) {
+void detect(cv::Mat& image, cv::dnn::Net& net, std::vector<Detection>& output, const std::vector<std::string>& className, int dimension) {
     cv::Mat blob;
 
     auto input_image = format_yolov5(image); //formatted 640x640 image
@@ -86,7 +86,7 @@ void detect(cv::Mat& image, cv::dnn::Net& net, std::vector<Detection>& output, c
                 boxes.push_back(cv::Rect(left, top, width, height));
             }
         }
-        data += DIMENSIONS; //MUST BE OUTPUT SIZE CAN BE FOUND WITH ONLINE MODEL VIEWER
+        data += dimension; //MUST BE OUTPUT SIZE CAN BE FOUND WITH ONLINE MODEL VIEWER
     }
 
     std::vector<int> nms_result;

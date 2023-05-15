@@ -35,18 +35,20 @@ enum KEYS
     TWO = 0x32,
     THREE = 0x33,
     FOUR = 0x34,
-
 };
 
 vector<string>MODENAMES = { "NONE", "PATHING", "FIGHT", "MINE", "HARVEST", "SENTRY" };
 
 const float THRESHOLD = 0.85; //For match templage
-int frameHeight = 540, frameWidth = 960, CURRENTMODE = NONE;
+int frameHeight = 540, frameWidth = 960, CURRENTMODE = NONE, CURRENTKEY = 0;
+const int DIMENSIONBEINGS = 9, DIMENSIONMINING = 0;
 
 Mat returnImage(bool& val);
 void returnMatchTemplate(Mat img, Mat templ, int& food, vector<Rect>& foodOutline);
 void detectBeingsAttack(Mat& frame, Net &net, std::vector<cv::Scalar> colors, std::vector<std::string> class_list);
 void detectBeingsAvoidance(Mat& frame, Net& net, std::vector<cv::Scalar> colors, std::vector<std::string> class_list);
+void detectBeingsSentry(Mat& frame, Net& net, std::vector<cv::Scalar> colors, std::vector<std::string> class_list);
+void detectLight(Mat& frame);
 
 DWORD WINAPI thred(__in LPVOID lpParameter) //Testing multithread in windows
 {
@@ -61,32 +63,49 @@ int main()
 {
     bool gameWindowFocus = false, is_cuda = true;
     int counter = 0, fpsCounter = 0, timePassed = 0, currentFood = 0, foodTimeCounter = 0;
-    auto start_time = high_resolution_clock::now();
-    auto FoodTimer = high_resolution_clock::now();
+    auto start_time = high_resolution_clock::now(); //Main loops fps timer
+    auto FoodTimer = high_resolution_clock::now(); //Timer to feed character
     time_t start = time(0), FoodTimeStart = time(0);
     unsigned int diffsum, maxdiff;
     double percent_diff;
     Mat matGray, matDiff, matGrayPrev, frame;
     string line;
+
+    //For storing food outlines
+    vector<Rect> foodOutline; 
+
+    //Load the model(s) & information
+    cv::dnn::Net netBeings;
+    load_net(netBeings, is_cuda);
     std::vector<std::string> class_list = load_class_list();
     const std::vector<cv::Scalar> colors = { cv::Scalar(255, 255, 0), cv::Scalar(0, 255, 0), cv::Scalar(0, 255, 255), cv::Scalar(255, 0, 0) };
-    vector<Rect> foodOutline;
-    cv::dnn::Net net;
-    load_net(net, is_cuda);
+
+
     
+    //INITAL SIZEING CODE
     frame = returnImage(gameWindowFocus); //initial frame
-    //Inital diff frame TODO get unstuck with diff
+    cvtColor(frame, frame, COLOR_BGRA2BGR); //Go from 8UC4 to 8UC3
+    resize(frame, frame, Size(960, 540), INTER_LINEAR);
+
+
+
     cvtColor(frame, matGray, COLOR_BGR2GRAY);
     matDiff = matGray.clone();
     matGrayPrev = matGray.clone();
     maxdiff = (matDiff.cols) * (matDiff.rows) * 255;
 
     Mat templ = imread("MatchTemplate/food.png"); //For telling how much food exists
-    Mat img;
-    bool KeyFlag = true;
 
+    bool KeyFlag = true;
+   
     DWORD dwThreadId;
     static HANDLE hThread = NULL;
+
+
+
+
+
+
 
     while (1)
     {
@@ -98,6 +117,7 @@ int main()
             else
                 CURRENTMODE++; 
             cout << "CURRENT MODDE: " << MODENAMES[CURRENTMODE] << endl;
+            //Verify none of existing keys are still pressed
             KeyActionUp(0x57);
             KeyActionUp(VK_SPACE);
             MouseLeftClickUp();
@@ -117,9 +137,7 @@ int main()
         //cvtColor(frame, matGray, COLOR_BGR2GRAY);
         //absdiff(matGrayPrev, matGray, matDiff);
         //diffsum = (unsigned int)sum(matDiff)[0];
-       // percent_diff = ((double)diffsum / (double)maxdiff) * 100;
-        //cout << percent_diff << endl;
-
+        //percent_diff = ((double)diffsum / (double)maxdiff) * 100;
         if (gameWindowFocus) { //Main window foucs
             if (CURRENTMODE == NONE)
             {
@@ -129,11 +147,12 @@ int main()
             {
                 KeyActionDown(0x57);
                 KeyActionDown(VK_SPACE);
-                detectBeingsAvoidance(frame, net, colors, class_list);
+                detectBeingsAvoidance(frame, netBeings, colors, class_list);
             }
             else if (CURRENTMODE == FIGHT)
             {
-                detectBeingsAttack(frame, net, colors, class_list);
+                CURRENTKEY = TWO; //Change key
+                detectBeingsAttack(frame, netBeings, colors, class_list);
             }
             else if (CURRENTMODE == MINE)
             {
@@ -146,14 +165,13 @@ int main()
             }
             else if(CURRENTMODE == SENTRY)
             {
-                
+                detectBeingsSentry(frame, netBeings, colors, class_list);
             }
-            //frame = returnMatchTemplate(frame.clone(), templ, currentFood); //Find hunger
-            //detectBeings(frame, net, colors, class_list);
 
             //Only feed if window is in focus
             auto currentTimeFood = high_resolution_clock::now();
             auto foodElapseTime = duration_cast<seconds>(currentTimeFood - FoodTimer).count();
+            //Feed every 3 seconds or more
             if (foodElapseTime >= 3)
             {
                 returnMatchTemplate(frame.clone(), templ, currentFood, foodOutline); //Find hunger and get shape
@@ -179,22 +197,17 @@ int main()
                 }
             }
         }
-        else
+        else //If window is out of focus make sure no keys are still going.
         {
             KeyActionUp(0x57);
             KeyActionUp(VK_SPACE);
             MouseLeftClickUp();
             CloseHandle(hThread);
-
         }
-        
-        
-        //cv::rectangle(frame, Point(0, 0), Point(frameWidth * 0.2, frameHeight * 0.3), Scalar(0, 0, 0), 3);
-        //cv::rectangle(frame, Point(240, 469), Point(605, 515), Scalar(0, 0, 0), 3); //For hotbar
+        detectLight(frame);
         imshow("Game Actual", frame);
         //imshow("diff", matDiff);
-
-        //matGrayPrev = matGray.clone();
+       // matGrayPrev = matGray.clone();
         //cout << percent_diff << endl;
 
   
@@ -233,9 +246,6 @@ Mat returnImage(bool &val)
 
     int width = rect.right - rect.left;
     int height = rect.bottom - rect.top;
-    // global variables for current frame dimensions
-    //frameHeight = height;
-    //frameWidth = width; 
     
     HDC hdcMem = CreateCompatibleDC(hdc); // Create a compatible device context
     HBITMAP hBitmap = CreateCompatibleBitmap(hdc, width, height); // Create a compatible bitmap
@@ -270,7 +280,6 @@ void returnMatchTemplate(Mat img, Mat templ, int &food, vector<Rect> &foodOutlin
     cvtColor(img2, img_gray, COLOR_BGR2GRAY);
     cvtColor(templ2, templ_gray, COLOR_BGR2GRAY);
 
-
     Mat1f result;
 
     cvtColor(img, img, COLOR_BGRA2BGR);
@@ -301,10 +310,10 @@ void returnMatchTemplate(Mat img, Mat templ, int &food, vector<Rect> &foodOutlin
     }
 }
 
-void detectBeingsAttack(Mat& frame, Net& net, std::vector<cv::Scalar> colors, std::vector<std::string> class_list)
+void detectBeingsAttack(Mat& frame, Net& netBeings, std::vector<cv::Scalar> colors, std::vector<std::string> class_list)
 {
     std::vector<Detection> output;
-    detect(frame, net, output, class_list);
+    detect(frame, netBeings, output, class_list, DIMENSIONBEINGS);
     int detections = output.size();
     for (int i = 0; i < detections; ++i)
     {
@@ -320,83 +329,117 @@ void detectBeingsAttack(Mat& frame, Net& net, std::vector<cv::Scalar> colors, st
         int centerY = box.y + box.height / 2;
         //cout << box.height << " BOX HEIGHT" << endl;
         //cout << frameHeight << " FRAME HEIGHT " << endl;
-        float upperBound = frameHeight - (frameHeight * .30);
-        //When in creatures face stop and attack
+        float upperBound = frameHeight - (frameHeight * .50);
+        //When in creatures in face stop and attack
         if (upperBound < box.height)
         {
-            MouseLeftClick();
+            MouseLeftClick(); //attack
             KeyActionUp(0x57); //Stop running
-            KeyActionUp(VK_SPACE);
-
+            KeyActionUp(VK_SPACE); //stop jumping
         }
         else
         {
             MouseLeftClickUp(); //cancel input
-            KeyActionDown(0x57);
-            KeyActionDown(VK_SPACE);
+            KeyActionDown(0x57); //walk towards
         }
-            if (centerX > frameWidth / 2)
-            {
-                MouseMove(2, 0);
-            }
-            if (centerX < frameWidth / 2)
-            {
-                MouseMove(-2, 0);
-            }
-            if (centerY > frameHeight / 2)
-            {
-                MouseMove(0, 1);
-            }
-            if (centerY < frameHeight / 2)
-            {
-                MouseMove(0, -1);
-            }
-        
+        if (centerX > frameWidth / 2)
+        {
+            MouseMove(4, 0);
+        }
+        if (centerX < frameWidth / 2)
+        {
+            MouseMove(-4, 0);
+        }
+        if (centerY > frameHeight / 2)
+        {
+            MouseMove(0, 2);
+        }
+        if (centerY < frameHeight / 2)
+        {
+            MouseMove(0, -2);
+        }
     }
+    if (detections == 0)
+    {
+        MouseLeftClickUp(); //cancel input
+        KeyActionDown(0x57); //walk towards
+        KeyActionDown(VK_SPACE); //jump
+    }
+    else
+        KeyActionDown(VK_SPACE); //jump
+
 }
 
-void detectBeingsAvoidance(Mat& frame, Net& net, std::vector<cv::Scalar> colors, std::vector<std::string> class_list)
+void detectBeingsAvoidance(Mat& frame, Net& netBeings, std::vector<cv::Scalar> colors, std::vector<std::string> class_list)
 {
     std::vector<Detection> output;
-    detect(frame, net, output, class_list);
+    detect(frame, netBeings, output, class_list, DIMENSIONBEINGS);
     int detections = output.size();
     for (int i = 0; i < detections; ++i)
     {
         auto box = output[i].box;
         auto classId = output[i].class_id;
         const auto color = colors[classId % colors.size()];
-        cv::rectangle(frame, box, color, 3);
-        cv::rectangle(frame, cv::Point(box.x, box.y - 20), cv::Point(box.x + box.width, box.y), color, cv::FILLED);
+        rectangle(frame, box, color, 3);
+        rectangle(frame, Point(box.x, box.y - 20), Point(box.x + box.width, box.y), color, FILLED);
         circle(frame, Point2i(box.x + box.width / 2, box.y + box.height / 2), 5, Scalar(0, 125, 230), 4, 3); //Center enemy
         circle(frame, Point2i(frameWidth / 2, frameHeight / 2), 5, Scalar(0, 125, 230), 4, 3); //Center screen
-        cv::putText(frame, class_list[classId].c_str(), cv::Point(box.x, box.y - 5), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0));
+        putText(frame, class_list[classId].c_str(), Point(box.x, box.y - 5), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 0, 0));
 
         int centerX = box.x + box.width / 2;
         int centerY = box.y + box.height / 2;
-        if (CURRENTMODE == PATHING || CURRENTMODE == MINE || CURRENTMODE == HARVEST)
-        {
-            MouseMove(5, 0);
-        }
-        else if (CURRENTMODE == FIGHT)
-        {
-            if (centerX > frameWidth / 2)
-            {
-                MouseMove(2, 0);
-            }
-            if(centerX < frameWidth / 2)
-            {
-                MouseMove(-2, 0);
-            }
-            if (centerY > frameHeight / 2)
-            {
-                MouseMove(0, 1);
-            }
-            if (centerY < frameHeight / 2)
-            {
-                MouseMove(0, -1);
-            }
+        MouseMove(5, 0);
+    }
+}
+
+void detectBeingsSentry(Mat& frame, Net& netBeings, std::vector<cv::Scalar> colors, std::vector<std::string> class_list)
+{
+    std::vector<Detection> output;
+    detect(frame, netBeings, output, class_list, DIMENSIONBEINGS);
+    int detections = output.size();
+    if (detections >= 1)
+    {
+        CURRENTMODE = PATHING;
+    }
+    MouseMove(3, 0);
+
+}
+
+//Detects brightest light in scene, partially created by chatGPT
+void detectLight(Mat& frame) 
+{
+    Mat binary;
+    Mat tempFrame = frame.clone();
+    cvtColor(tempFrame, tempFrame, COLOR_RGB2GRAY);
+    cv::threshold(tempFrame, binary, 0, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
+
+    // Find the contours in the binary image
+    std::vector<std::vector<cv::Point>> contours;
+    std::vector<cv::Vec4i> hierarchy;
+    cv::findContours(binary, contours, hierarchy, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+
+    // Iterate through the contours to find the contour with the largest area
+    double max_area = 0.0;
+    int max_area_contour_idx = -1;
+    for (int i = 0; i < contours.size(); i++) {
+        double area = cv::contourArea(contours[i]);
+        if (area > max_area) {
+            max_area = area;
+            max_area_contour_idx = i;
         }
     }
+
+    // Use the moments of the largest contour to calculate the centroid of the brightest spot
+    if (max_area_contour_idx != -1) {
+        cv::Moments moments = cv::moments(contours[max_area_contour_idx], false);
+        double centroid_x = moments.m10 / moments.m00;
+        double centroid_y = moments.m01 / moments.m00;
+        cv::Point brightest_spot(centroid_x, centroid_y);
+
+        // Draw a circle around the brightest spot on the original frame
+        cv::circle(frame, brightest_spot, 10, cv::Scalar(0, 255, 0), -1);
+    }
+
 }
 
 
