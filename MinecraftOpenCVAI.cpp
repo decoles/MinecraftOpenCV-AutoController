@@ -63,7 +63,7 @@ DWORD WINAPI eatThread(__in LPVOID lpParameter) //performs eating action while d
     return 0;
 }
 
-DWORD WINAPI changeCurrentKey(__in LPVOID lpParameter, int val) //changes key and sleeps while performing other tasks
+DWORD WINAPI changeCurrentKey(__in LPVOID lpParameter) //changes key and sleeps while performing other tasks
 {
     KeyActionDown(THREE);//Press three key for food
     Sleep(1);
@@ -221,7 +221,7 @@ int main()
             CloseHandle(hThread);
         }
         detectLight(frame);
-        //imshow("Game Actual", frame);
+        imshow("Game Overlay", frame);
         //imshow("diff", matDiff);
        // matGrayPrev = matGray.clone();
         //cout << percent_diff << endl;
@@ -491,41 +491,29 @@ void detectTree(Mat& frame, Net& net, std::vector<cv::Scalar> colors, std::vecto
         if (upperBound < box.height)
         {
             MouseLeftClick(); //attack
-            KeyActionUp(0x57); //Stop running
-            //(VK_SPACE); //stop jumping
         }
         else
         {
             MouseLeftClickUp(); //cancel input
-            KeyActionDown(0x57); //walk towards
         }
-        if (centerX > FRAMEWIDTH / 2)
+        if (box.x > FRAMEWIDTH/2)
         {
-            MouseMove(2, 0);
+            MouseMove(1, 0);
         }
-        if (centerX < FRAMEWIDTH / 2)
+        else if (box.x + box.width < FRAMEWIDTH / 2)
         {
-            MouseMove(-2, 0);
+            MouseMove(-1, 0);
         }
-        if (centerY > FRAMEHEIGHT / 2)
+        if (box.y > FRAMEHEIGHT / 2)
         {
-            MouseMove(0, 2);
+            MouseMove(0, 1);
         }
-        if (centerY < FRAMEHEIGHT / 2)
+        else if (box.y + box.height < FRAMEHEIGHT / 2)
         {
-            MouseMove(0, -2);
+            MouseMove(0, -1);
         }
-
     }
 
-    if (detections == 0)
-    {
-        MouseLeftClickUp(); //cancel input
-        KeyActionDown(0x57); //walk towards
-        //KeyActionDown(VK_SPACE); //jump
-    }
-    //else
-        //KeyActionDown(VK_SPACE); //jump
         
     
 }
