@@ -40,22 +40,38 @@ enum KEYS
 vector<string>MODENAMES = { "NONE", "PATHING", "FIGHT", "MINE", "HARVEST", "SENTRY" };
 
 const float THRESHOLD = 0.85; //For match templage
-int frameHeight = 540, frameWidth = 960, CURRENTMODE = NONE, CURRENTKEY = 0;
-const int DIMENSIONBEINGS = 9, DIMENSIONMINING = 0;
+int CURRENTMODE = NONE, CURRENTKEY = 0;
+const int FRAMEHEIGHT = 540, FRAMEWIDTH = 960, DIMENSIONBEINGS = 9, DIMENSIONMINING = 0, DIMENSIONTREE = 7;
 
 Mat returnImage(bool& val);
 void returnMatchTemplate(Mat img, Mat templ, int& food, vector<Rect>& foodOutline);
 void detectBeingsAttack(Mat& frame, Net &net, std::vector<cv::Scalar> colors, std::vector<std::string> class_list);
 void detectBeingsAvoidance(Mat& frame, Net& net, std::vector<cv::Scalar> colors, std::vector<std::string> class_list);
 void detectBeingsSentry(Mat& frame, Net& net, std::vector<cv::Scalar> colors, std::vector<std::string> class_list);
+void detectTree(Mat& frame, Net& netBeings, std::vector<cv::Scalar> colors, std::vector<std::string> class_list);
 void detectLight(Mat& frame);
 
-DWORD WINAPI thred(__in LPVOID lpParameter) //Testing multithread in windows
+DWORD WINAPI eatThread(__in LPVOID lpParameter) //performs eating action while doing other tasks
 {
+    KeyActionDown(THREE);//Press three key for food
+    Sleep(1);
+    KeyActionUp(THREE);
     MouseRightClickAndHold();
-   // KeyActionDown(0x33);//3 key
-    //Sleep(1);
-    //KeyActionUp(0x33);
+    KeyActionDown(CURRENTKEY);
+    Sleep(1);
+    KeyActionUp(CURRENTKEY);//Put key back to whichever place it was in
+    return 0;
+}
+
+DWORD WINAPI changeCurrentKey(__in LPVOID lpParameter, int val) //changes key and sleeps while performing other tasks
+{
+    KeyActionDown(THREE);//Press three key for food
+    Sleep(1);
+    KeyActionUp(THREE);
+    MouseRightClickAndHold();
+    KeyActionDown(CURRENTKEY);
+    Sleep(1);
+    KeyActionUp(CURRENTKEY);//Put key back to whichever place it was in
     return 0;
 }
 
@@ -76,8 +92,13 @@ int main()
 
     //Load the model(s) & information
     cv::dnn::Net netBeings;
-    load_net(netBeings, is_cuda);
-    std::vector<std::string> class_list = load_class_list();
+    cv::dnn::Net netTrees;
+
+    load_net(netBeings, is_cuda, "DetectEnemies.onnx");
+    load_net(netTrees, is_cuda, "DetectTrees.onnx");
+    std::vector<std::string> class_list_mobs = load_class_list("classesMobs.txt");
+    std::vector<std::string> class_list_trees = load_class_list("classesTrees.txt");
+
     const std::vector<cv::Scalar> colors = { cv::Scalar(255, 255, 0), cv::Scalar(0, 255, 0), cv::Scalar(0, 255, 255), cv::Scalar(255, 0, 0) };
 
 
@@ -88,24 +109,18 @@ int main()
     resize(frame, frame, Size(960, 540), INTER_LINEAR);
 
 
-
+    /*
     cvtColor(frame, matGray, COLOR_BGR2GRAY);
     matDiff = matGray.clone();
     matGrayPrev = matGray.clone();
     maxdiff = (matDiff.cols) * (matDiff.rows) * 255;
-
+    */
     Mat templ = imread("MatchTemplate/food.png"); //For telling how much food exists
 
     bool KeyFlag = true;
    
     DWORD dwThreadId;
     static HANDLE hThread = NULL;
-
-
-
-
-
-
 
     while (1)
     {
@@ -119,7 +134,7 @@ int main()
             cout << "CURRENT MODDE: " << MODENAMES[CURRENTMODE] << endl;
             //Verify none of existing keys are still pressed
             KeyActionUp(0x57);
-            KeyActionUp(VK_SPACE);
+            //KeyActionUp(VK_SPACE);
             MouseLeftClickUp();
         }
         frame = returnImage(gameWindowFocus);
@@ -146,13 +161,13 @@ int main()
             if (CURRENTMODE == PATHING)
             {
                 KeyActionDown(0x57);
-                KeyActionDown(VK_SPACE);
-                detectBeingsAvoidance(frame, netBeings, colors, class_list);
+                //KeyActionDown(VK_SPACE);
+                detectBeingsAvoidance(frame, netBeings, colors, class_list_mobs);
             }
             else if (CURRENTMODE == FIGHT)
             {
                 CURRENTKEY = TWO; //Change key
-                detectBeingsAttack(frame, netBeings, colors, class_list);
+               detectBeingsAttack(frame, netBeings, colors, class_list_mobs);
             }
             else if (CURRENTMODE == MINE)
             {
@@ -161,11 +176,12 @@ int main()
 
             else if (CURRENTMODE == HARVEST)
             {
+                detectTree(frame, netTrees, colors, class_list_trees);
 
             }
             else if(CURRENTMODE == SENTRY)
             {
-                detectBeingsSentry(frame, netBeings, colors, class_list);
+                detectBeingsSentry(frame, netBeings, colors, class_list_mobs);
             }
 
             //Only feed if window is in focus
@@ -180,7 +196,7 @@ int main()
                 {
                     if (currentFood <= 8 && hThread == NULL)
                     {
-                        hThread = CreateThread(NULL, 0, thred, NULL, 0, &dwThreadId);
+                        hThread = CreateThread(NULL, 0, eatThread, NULL, 0, &dwThreadId);
                     }
                     if (currentFood >= 9 && hThread != NULL) //If thread is occupied and food is good cancel thread
                     {
@@ -200,12 +216,12 @@ int main()
         else //If window is out of focus make sure no keys are still going.
         {
             KeyActionUp(0x57);
-            KeyActionUp(VK_SPACE);
+            //KeyActionUp(VK_SPACE);
             MouseLeftClickUp();
             CloseHandle(hThread);
         }
         detectLight(frame);
-        imshow("Game Actual", frame);
+        //imshow("Game Actual", frame);
         //imshow("diff", matDiff);
        // matGrayPrev = matGray.clone();
         //cout << percent_diff << endl;
@@ -323,38 +339,38 @@ void detectBeingsAttack(Mat& frame, Net& netBeings, std::vector<cv::Scalar> colo
         cv::rectangle(frame, box, color, 3);
         cv::rectangle(frame, cv::Point(box.x, box.y - 20), cv::Point(box.x + box.width, box.y), color, cv::FILLED);
         circle(frame, Point2i(box.x + box.width/2, box.y + box.height/2), 5, Scalar(0, 125, 230), 4, 3); //Center enemy
-        circle(frame, Point2i(frameWidth / 2, frameHeight / 2), 5, Scalar(0, 125, 230), 4, 3); //Center screen
+        circle(frame, Point2i(FRAMEWIDTH / 2, FRAMEHEIGHT / 2), 5, Scalar(0, 125, 230), 4, 3); //Center screen
         cv::putText(frame, class_list[classId].c_str(), cv::Point(box.x, box.y - 5), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0));
         int centerX = box.x + box.width / 2;
         int centerY = box.y + box.height / 2;
         //cout << box.height << " BOX HEIGHT" << endl;
-        //cout << frameHeight << " FRAME HEIGHT " << endl;
-        float upperBound = frameHeight - (frameHeight * .50);
+        //cout << FRAMEHEIGHT << " FRAME HEIGHT " << endl;
+        float upperBound = FRAMEHEIGHT - (FRAMEHEIGHT * .50);
         //When in creatures in face stop and attack
         if (upperBound < box.height)
         {
             MouseLeftClick(); //attack
             KeyActionUp(0x57); //Stop running
-            KeyActionUp(VK_SPACE); //stop jumping
+            //KeyActionUp(VK_SPACE); //stop jumping
         }
         else
         {
             MouseLeftClickUp(); //cancel input
             KeyActionDown(0x57); //walk towards
         }
-        if (centerX > frameWidth / 2)
+        if (centerX > FRAMEWIDTH / 2)
         {
             MouseMove(4, 0);
         }
-        if (centerX < frameWidth / 2)
+        if (centerX < FRAMEWIDTH / 2)
         {
             MouseMove(-4, 0);
         }
-        if (centerY > frameHeight / 2)
+        if (centerY > FRAMEHEIGHT / 2)
         {
             MouseMove(0, 2);
         }
-        if (centerY < frameHeight / 2)
+        if (centerY < FRAMEHEIGHT / 2)
         {
             MouseMove(0, -2);
         }
@@ -363,10 +379,10 @@ void detectBeingsAttack(Mat& frame, Net& netBeings, std::vector<cv::Scalar> colo
     {
         MouseLeftClickUp(); //cancel input
         KeyActionDown(0x57); //walk towards
-        KeyActionDown(VK_SPACE); //jump
+        //KeyActionDown(VK_SPACE); //jump
     }
-    else
-        KeyActionDown(VK_SPACE); //jump
+    //else
+        //KeyActionDown(VK_SPACE); //jump
 
 }
 
@@ -383,12 +399,19 @@ void detectBeingsAvoidance(Mat& frame, Net& netBeings, std::vector<cv::Scalar> c
         rectangle(frame, box, color, 3);
         rectangle(frame, Point(box.x, box.y - 20), Point(box.x + box.width, box.y), color, FILLED);
         circle(frame, Point2i(box.x + box.width / 2, box.y + box.height / 2), 5, Scalar(0, 125, 230), 4, 3); //Center enemy
-        circle(frame, Point2i(frameWidth / 2, frameHeight / 2), 5, Scalar(0, 125, 230), 4, 3); //Center screen
+        circle(frame, Point2i(FRAMEWIDTH / 2, FRAMEHEIGHT / 2), 5, Scalar(0, 125, 230), 4, 3); //Center screen
         putText(frame, class_list[classId].c_str(), Point(box.x, box.y - 5), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 0, 0));
 
         int centerX = box.x + box.width / 2;
-        int centerY = box.y + box.height / 2;
-        MouseMove(5, 0);
+        // move left or right depening if the enemy is on the left or right side
+        if (centerX > FRAMEWIDTH / 2)
+        {
+            MouseMove(-5, 0);
+        }
+        if (centerX < FRAMEWIDTH / 2)
+        {
+            MouseMove(5, 0);
+        }
     }
 }
 
@@ -442,4 +465,68 @@ void detectLight(Mat& frame)
 
 }
 
+void detectTree(Mat& frame, Net& net, std::vector<cv::Scalar> colors, std::vector<std::string> class_list)
+{
+    std::vector<Detection> output;
+    detect(frame, net, output, class_list, DIMENSIONTREE);
+    int detections = output.size();
+    float upperBound = FRAMEHEIGHT - (FRAMEHEIGHT * .70);
+
+   // for (int i = 0; i < detections; ++i)
+   // {
+    if(detections != 0){
+        auto box = output[0].box;
+        auto classId = output[0].class_id;
+        const auto color = colors[classId % colors.size()];
+        cv::rectangle(frame, box, color, 3);
+        cv::rectangle(frame, cv::Point(box.x, box.y - 20), cv::Point(box.x + box.width, box.y), color, cv::FILLED);
+        circle(frame, Point2i(box.x + box.width / 2, box.y + box.height / 2), 5, Scalar(0, 125, 230), 4, 3); //Center enemy
+        circle(frame, Point2i(FRAMEWIDTH / 2, FRAMEHEIGHT / 2), 5, Scalar(0, 125, 230), 4, 3); //Center screen
+        cv::putText(frame, class_list[classId].c_str(), cv::Point(box.x, box.y - 5), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0));
+        int centerX = box.x + box.width / 2;
+        int centerY = box.y + box.height / 2;
+        cout << box.height << " BOX HEIGHT" << endl;
+        cout << upperBound << " FRAME HEIGHT " << endl;
+        //When in creatures in face stop and attack
+        if (upperBound < box.height)
+        {
+            MouseLeftClick(); //attack
+            KeyActionUp(0x57); //Stop running
+            //(VK_SPACE); //stop jumping
+        }
+        else
+        {
+            MouseLeftClickUp(); //cancel input
+            KeyActionDown(0x57); //walk towards
+        }
+        if (centerX > FRAMEWIDTH / 2)
+        {
+            MouseMove(2, 0);
+        }
+        if (centerX < FRAMEWIDTH / 2)
+        {
+            MouseMove(-2, 0);
+        }
+        if (centerY > FRAMEHEIGHT / 2)
+        {
+            MouseMove(0, 2);
+        }
+        if (centerY < FRAMEHEIGHT / 2)
+        {
+            MouseMove(0, -2);
+        }
+
+    }
+
+    if (detections == 0)
+    {
+        MouseLeftClickUp(); //cancel input
+        KeyActionDown(0x57); //walk towards
+        //KeyActionDown(VK_SPACE); //jump
+    }
+    //else
+        //KeyActionDown(VK_SPACE); //jump
+        
+    
+}
 

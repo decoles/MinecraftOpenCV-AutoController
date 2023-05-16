@@ -148,11 +148,6 @@
     <ClCompile Include="src\ModelDetections.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="best.onnx" />
-    <None Include="classes.txt" />
-    <None Include="trainedCreeper.onnx" />
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="src\KeySimulation.h" />
     <ClInclude Include="src\ModelDetections.h" />
     <ClInclude Include="src\Modes.h" />
@@ -166,6 +161,14 @@
     <Image Include="testImages\sample.jpg" />
     <Image Include="testImages\test.PNG" />
     <Image Include="testImages\zombie_test.jpg" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="classesMobs.txt" />
+    <Text Include="classesTrees.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="DetectEnemies.onnx" />
+    <None Include="DetectTrees.onnx" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

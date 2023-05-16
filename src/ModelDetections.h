@@ -5,6 +5,9 @@
 #include <opencv2/opencv.hpp>
 #include <vector>
 
+using namespace std;
+using namespace cv;
+
 struct Detection
 {
     int class_id;
@@ -12,11 +15,11 @@ struct Detection
     cv::Rect box;
 };
 
-std::vector<std::string> load_class_list();
+vector<string> load_class_list(string val);
 
-void load_net(cv::dnn::Net& net, bool is_cuda);
+void load_net(dnn::Net& net, bool is_cuda, string modelName);
 
-cv::Mat format_yolov5(const cv::Mat& source);
+Mat format_yolov5(const Mat& source);
 
-void detect(cv::Mat& image, cv::dnn::Net& net, std::vector<Detection>& output, const std::vector<std::string>& className, int dimension);
+void detect(Mat& image, dnn::Net& net, vector<Detection>& output, const vector<string>& className, int dimension);
 #endif // !MODELDETECTIONS_H

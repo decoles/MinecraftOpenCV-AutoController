@@ -26,15 +26,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="best.onnx">
-      <Filter>Models</Filter>
-    </None>
-    <None Include="classes.txt">
-      <Filter>Models</Filter>
-    </None>
-    <None Include="trainedCreeper.onnx" />
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="src\ModelDetections.h">
       <Filter>Source Files</Filter>
     </ClInclude>
@@ -70,5 +61,21 @@
     <Image Include="MatchTemplate\minecraftHeart.png">
       <Filter>Resource Files</Filter>
     </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="classesMobs.txt">
+      <Filter>Models</Filter>
+    </Text>
+    <Text Include="classesTrees.txt">
+      <Filter>Models</Filter>
+    </Text>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="DetectEnemies.onnx">
+      <Filter>Models</Filter>
+    </None>
+    <None Include="DetectTrees.onnx">
+      <Filter>Models</Filter>
+    </None>
   </ItemGroup>
 </Project>

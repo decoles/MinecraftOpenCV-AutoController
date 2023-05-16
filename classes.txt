@@ -1,4 +1,0 @@
-creeper
-skeleton
-spider
-zombie
