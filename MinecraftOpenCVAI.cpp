@@ -4,8 +4,9 @@
 #include <opencv2/highgui.hpp>
 #include "opencv2/imgproc.hpp"
 #include <opencv2/dnn.hpp>
-#include <Windows.h>
+#include <opencv2/cudaimgproc.hpp>
 #include <opencv2/dnn/all_layers.hpp>
+#include <Windows.h>
 #include <ModelDetections.h>
 #include <string>
 #include <time.h>
@@ -45,7 +46,7 @@ const int FRAMEHEIGHT = 540, FRAMEWIDTH = 960, DIMENSIONBEINGS = 10, DIMENSIONMI
 
 Mat returnImage(bool& val);
 void returnMatchTemplate(Mat img, Mat templ, int& food, vector<Rect>& foodOutline);
-void detectBeingsAttack(Mat& frame, Net &net, std::vector<cv::Scalar> colors, std::vector<std::string> class_list);
+void detectBeingsAttack(Mat& frame, Net &net, std::vector<cv::Scalar> colors, std::vector<std::string> class_list, steady_clock::time_point &attack_timer);
 void detectBeingsAvoidance(Mat& frame, Net& net, std::vector<cv::Scalar> colors, std::vector<std::string> class_list);
 void detectBeingsSentry(Mat& frame, Net& net, std::vector<cv::Scalar> colors, std::vector<std::string> class_list);
 void detectTree(Mat& frame, Net& netBeings, std::vector<cv::Scalar> colors, std::vector<std::string> class_list);
@@ -75,10 +76,11 @@ DWORD WINAPI changeCurrentKey(__in LPVOID lpParameter) //changes key and sleeps 
 int main()
 {
     bool gameWindowFocus = false, is_cuda = true;
-    int counter = 0, fpsCounter = 0, timePassed = 0, currentFood = 0, foodTimeCounter = 0;
+    int counter = 0, fpsCounter = 0, timePassed = 0, currentFood = 0, foodTimeCounter = 0, lastFPS = 0;
     auto start_time = high_resolution_clock::now(); //Main loops fps timer
     auto FoodTimer = high_resolution_clock::now(); //Timer to feed character
     auto stuckTimer = high_resolution_clock::now();//Determine when to unstuck
+    auto AttackTimer = high_resolution_clock::now();//Determine when to stock attacking
     unsigned int diffsum, maxdiff;
     double percent_diff;
     Mat matGray, matDiff, matGrayPrev, frame;
@@ -92,13 +94,13 @@ int main()
     cv::dnn::Net netTrees;
     cv::dnn::Net netOre;
 
-    load_net(netBeings, is_cuda, "DetectEnemies.onnx");
-    load_net(netTrees, is_cuda, "DetectTrees.onnx");
-    load_net(netOre, is_cuda, "DetectOre.onnx");
+    load_net(netBeings, is_cuda, "Models/DetectEnemies.onnx");
+    load_net(netTrees, is_cuda, "Models/DetectTrees.onnx");
+    load_net(netOre, is_cuda, "Models/DetectOre.onnx");
 
-    std::vector<std::string> class_list_mobs = load_class_list("classesMobs.txt");
-    std::vector<std::string> class_list_trees = load_class_list("classesTrees.txt");
-    std::vector<std::string> class_list_ores = load_class_list("classesOres.txt");
+    std::vector<std::string> class_list_mobs = load_class_list("Models/classesMobs.txt");
+    std::vector<std::string> class_list_trees = load_class_list("Models/classesTrees.txt");
+    std::vector<std::string> class_list_ores = load_class_list("Models/classesOres.txt");
 
     const std::vector<cv::Scalar> colors = { cv::Scalar(255, 255, 0), cv::Scalar(0, 255, 0), cv::Scalar(0, 255, 255), cv::Scalar(255, 0, 0) };
 
@@ -172,30 +174,35 @@ int main()
         if (gameWindowFocus) { //Main window foucs
             if (CURRENTMODE == NONE)
             {
-                cv::putText(frame, "NO MODE SELECTED", Point(50, 50), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(255, 255, 255));
+                putText(frame, "NO MODE SELECTED", Point(50, 50), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(255, 255, 255));
             }
             if (CURRENTMODE == PATHING)
             {
+                putText(frame, "PATHING MODE SELECTED", Point(50, 50), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(255, 255, 255));
                 KeyActionDown(0x57);
-                //KeyActionDown(VK_SPACE);
                 detectBeingsAvoidance(frame, netBeings, colors, class_list_mobs);
             }
             else if (CURRENTMODE == FIGHT)
             {
-               detectBeingsAttack(frame, netBeings, colors, class_list_mobs);
+               
+               putText(frame, "FIGHT MODE SELECTED", Point(50, 50), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(255, 255, 255));
+               detectBeingsAttack(frame, netBeings, colors, class_list_mobs, AttackTimer);
             }
             else if (CURRENTMODE == MINE)
             {
+                putText(frame, "MINE MODE SELECTED", Point(50, 50), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(255, 255, 255));
                 detectOre(frame, netOre, colors, class_list_ores);
             }
 
             else if (CURRENTMODE == HARVEST)
             {
+                putText(frame, "HARVEST MODE SELECTED", Point(50, 50), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(255, 255, 255));
                 detectTree(frame, netTrees, colors, class_list_trees);
 
             }
             else if(CURRENTMODE == SENTRY)
             {
+                putText(frame, "SENTRY MODE SELECTED", Point(50, 50), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(255, 255, 255));
                 detectBeingsSentry(frame, netBeings, colors, class_list_mobs);
             }
             //Only feed if window is in focus
@@ -238,37 +245,40 @@ int main()
             auto stuckElapsedTime = duration_cast<seconds>(currentStuckTime - stuckTimer).count();
             if (percent_diff < 1)
             {
+                //If no moevment for 5 or more seconds move the mouse to try get unstuck
                 if (stuckElapsedTime >= 5)
                 {
                     MouseMove(90, 0);
                 }
             }
-            else
-            {
+            else //Keep resetting the timer for getting suck
                 stuckTimer = currentStuckTime;
-            }
         }
         else //If window is out of focus make sure no keys are still going.
         {
-            KeyActionUp(0x57);
-            //KeyActionUp(VK_SPACE);
-            MouseLeftClickUp();
+            //KeyActionUp(0x57);
+           // KeyActionUp(VK_SPACE);
+            //MouseLeftClickUp();
             CloseHandle(hThread);
         }
 
         //imshow("diff", matDiff);
 
         matGrayPrev = matGray.clone();
-        imshow("Game Overlay", frame);
         counter++;
         auto current_time = high_resolution_clock::now();
         auto elapsed_time = duration_cast<seconds>(current_time - start_time).count();
         if (elapsed_time >= 1) {
             cout << "Loop completed " << counter << " times in " << elapsed_time << " seconds." << endl;
             KeyFlag = true; //Resets keypress timer so it dosent get spammed
+            lastFPS = counter; //For keeping frame fps active
             counter = 0; //For fps counter
             start_time = current_time;
         }
+        string fpsString = to_string(lastFPS);
+        cv::putText(frame, fpsString, Point(FRAMEWIDTH - 60, 50), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 0, 255));
+        imshow("Game Overlay", frame);
+
     }
     return 0;
 }
@@ -355,11 +365,13 @@ void returnMatchTemplate(Mat img, Mat templ, int &food, vector<Rect> &foodOutlin
     }
 }
 
-void detectBeingsAttack(Mat& frame, Net& netBeings, std::vector<cv::Scalar> colors, std::vector<std::string> class_list)
+void detectBeingsAttack(Mat& frame, Net& netBeings, std::vector<cv::Scalar> colors, std::vector<std::string> class_list, steady_clock::time_point& attack_timer)
 {
     std::vector<Detection> output;
     detect(frame, netBeings, output, class_list, DIMENSIONBEINGS);
     int detections = output.size();
+    auto currentAttackTime = high_resolution_clock::now();
+    auto AttackElapsedTime = duration_cast<seconds>(currentAttackTime - attack_timer).count();
     for (int i = 0; i < detections; ++i)
     {
         auto box = output[i].box;
@@ -370,7 +382,10 @@ void detectBeingsAttack(Mat& frame, Net& netBeings, std::vector<cv::Scalar> colo
         circle(frame, Point2i(box.x + box.width / 2, box.y + box.height / 2), 5, Scalar(0, 125, 230), 4, 3); //Center enemy
         circle(frame, Point2i(FRAMEWIDTH / 2, FRAMEHEIGHT / 2), 5, Scalar(0, 125, 230), 4, 3); //Center screen
         cv::putText(frame, class_list[classId].c_str(), cv::Point(box.x, box.y - 5), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0));
-        float upperBound = FRAMEHEIGHT - (FRAMEHEIGHT * .50);
+        float upperBound = FRAMEHEIGHT - (FRAMEHEIGHT * .70);
+        line(frame, Point(10, upperBound), Point(500, upperBound), Scalar(255, 0, 0), 2, LINE_4);
+        line(frame, Point(10, box.height), Point(500, box.height), Scalar(0, 0, 255), 2, LINE_4);
+
         if (classId != 1) {
             //When in creatures in face stop and attack
             if (upperBound < box.height)
@@ -378,38 +393,33 @@ void detectBeingsAttack(Mat& frame, Net& netBeings, std::vector<cv::Scalar> colo
                 MouseLeftClick(); //attack
                 KeyActionUp(0x57); //Stop running
                 //KeyActionUp(VK_SPACE); //stop jumping
+                attack_timer = currentAttackTime;
             }
-            else
-            {
-                MouseLeftClickUp(); //cancel input
-                KeyActionDown(0x57); //walk towards
-            }
-            if (box.x > FRAMEWIDTH / 2)
+            if (box.x + 2 > FRAMEWIDTH / 2)
             {
                 MouseMove(4, 0);
             }
-            else if (box.x + box.width < FRAMEWIDTH / 2)
+            else if (box.x + box.width - 2< FRAMEWIDTH / 2)
             {
                 MouseMove(-4, 0);
             }
             if (box.y > FRAMEHEIGHT / 2)
             {
-                MouseMove(0, 2);
+                MouseMove(0, 6);
             }
             else if (box.y + box.height < FRAMEHEIGHT / 2)
             {
-                MouseMove(0, -2);
+                MouseMove(0, -6);
             }
         }
     }
-    if (detections == 0) // & 
+
+    if (detections == 0 && AttackElapsedTime >= 2) // if nothing is seen and no attacks have happened start moving
     {
         MouseLeftClickUp(); //cancel input
         KeyActionDown(0x57); //walk towards
-        //KeyActionDown(VK_SPACE); //jump
+        attack_timer = currentAttackTime;
     }
-    //else
-        //KeyActionDown(VK_SPACE); //jump
 
 }
 
@@ -455,20 +465,20 @@ void detectBeingsSentry(Mat& frame, Net& netBeings, std::vector<cv::Scalar> colo
 
 }
 
-//Detects brightest light in scene, partially created by chatGPT
+//Detects brightest light in scene
 void detectLight(Mat& frame) 
 {
     Mat binary;
     Mat tempFrame = frame.clone();
     cvtColor(tempFrame, tempFrame, COLOR_RGB2GRAY);
+    //Find brightest and darkest areas
     cv::threshold(tempFrame, binary, 0, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
-
     // Find the contours in the binary image
     std::vector<std::vector<cv::Point>> contours;
     std::vector<cv::Vec4i> hierarchy;
     cv::findContours(binary, contours, hierarchy, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
 
-    // Iterate through the contours to find the contour with the largest area
+    //Iterate through the contours to find the contour with the largest area
     double max_area = 0.0;
     int max_area_contour_idx = -1;
     for (int i = 0; i < contours.size(); i++) {
@@ -479,7 +489,7 @@ void detectLight(Mat& frame)
         }
     }
 
-    // Use the moments of the largest contour to calculate the centroid of the brightest spot
+    //Use the moments of the largest contour to calculate the centroid of the brightest spot
     if (max_area_contour_idx != -1) {
         cv::Moments moments = cv::moments(contours[max_area_contour_idx], false);
         double centroid_x = moments.m10 / moments.m00;
@@ -489,7 +499,6 @@ void detectLight(Mat& frame)
         // Draw a circle around the brightest spot on the original frame
         cv::circle(frame, brightest_spot, 10, cv::Scalar(0, 255, 0), -1);
     }
-
 }
 
 void detectTree(Mat& frame, Net& net, std::vector<cv::Scalar> colors, std::vector<std::string> class_list)
@@ -499,7 +508,7 @@ void detectTree(Mat& frame, Net& net, std::vector<cv::Scalar> colors, std::vecto
     int detections = output.size();
     float upperBound = FRAMEHEIGHT - (FRAMEHEIGHT * .70);
 
-    if(detections != 0){
+    if(detections != 0){ //Only need one detection at a time doesnt really matter where
         auto box = output[0].box;
         auto classId = output[0].class_id;
         const auto color = colors[classId % colors.size()];
@@ -509,29 +518,17 @@ void detectTree(Mat& frame, Net& net, std::vector<cv::Scalar> colors, std::vecto
         circle(frame, Point2i(FRAMEWIDTH / 2, FRAMEHEIGHT / 2), 5, Scalar(0, 125, 230), 4, 3); //Center screen
         cv::putText(frame, class_list[classId].c_str(), cv::Point(box.x, box.y - 5), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0));
         if (upperBound < box.height)
-        {
             MouseLeftClick(); //attack
-        }
         else
-        {
             MouseLeftClickUp(); //cancel input
-        }
         if (box.x > FRAMEWIDTH/2)
-        {
             MouseMove(1, 0);
-        }
         else if (box.x + box.width < FRAMEWIDTH / 2)
-        {
             MouseMove(-1, 0);
-        }
         if (box.y > FRAMEHEIGHT / 2)
-        {
             MouseMove(0, 1);
-        }
         else if (box.y + box.height < FRAMEHEIGHT / 2)
-        {
             MouseMove(0, -1);
-        }
     }
 }
 

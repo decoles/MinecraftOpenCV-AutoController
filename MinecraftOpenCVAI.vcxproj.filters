@@ -63,21 +63,27 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <Text Include="classesMobs.txt">
+    <Text Include="Models\classesMobs.txt">
       <Filter>Models</Filter>
     </Text>
-    <Text Include="classesTrees.txt">
+    <Text Include="Models\classesOres.txt">
       <Filter>Models</Filter>
     </Text>
-    <Text Include="classesOres.txt">
+    <Text Include="Models\classesTrees.txt">
       <Filter>Models</Filter>
     </Text>
   </ItemGroup>
   <ItemGroup>
-    <None Include="DetectEnemies.onnx">
+    <None Include="Models\DetectEnemies.onnx">
       <Filter>Models</Filter>
     </None>
-    <None Include="DetectTrees.onnx">
+    <None Include="Models\DetectEnemiesOLD.onnx">
+      <Filter>Models</Filter>
+    </None>
+    <None Include="Models\DetectOre.onnx">
+      <Filter>Models</Filter>
+    </None>
+    <None Include="Models\DetectTrees.onnx">
       <Filter>Models</Filter>
     </None>
   </ItemGroup>

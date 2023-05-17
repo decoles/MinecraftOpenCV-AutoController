@@ -163,13 +163,15 @@
     <Image Include="testImages\zombie_test.jpg" />
   </ItemGroup>
   <ItemGroup>
-    <Text Include="classesMobs.txt" />
-    <Text Include="classesOres.txt" />
-    <Text Include="classesTrees.txt" />
+    <Text Include="Models\classesMobs.txt" />
+    <Text Include="Models\classesOres.txt" />
+    <Text Include="Models\classesTrees.txt" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="DetectEnemies.onnx" />
-    <None Include="DetectTrees.onnx" />
+    <None Include="Models\DetectEnemies.onnx" />
+    <None Include="Models\DetectEnemiesOLD.onnx" />
+    <None Include="Models\DetectOre.onnx" />
+    <None Include="Models\DetectTrees.onnx" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
