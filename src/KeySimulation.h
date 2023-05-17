@@ -7,8 +7,8 @@ using namespace std;
 
 void MouseMove(int x, int y)
 {
-    double fScreenWidth = ::GetSystemMetrics(SM_CXSCREEN) - 1;
-    double fScreenHeight = ::GetSystemMetrics(SM_CYSCREEN) - 1;
+    double fScreenWidth = GetSystemMetrics(SM_CXSCREEN) - 1;
+    double fScreenHeight = GetSystemMetrics(SM_CYSCREEN) - 1;
     double fx = x * 10;
     double fy = y * 10; //Turns speeds
     INPUT Input = { 0 };
@@ -18,6 +18,7 @@ void MouseMove(int x, int y)
     Input.mi.dy = fy;
     SendInput(1, &Input, sizeof(INPUT));
 }
+
 void MouseRightClickAndHold()
 {
     INPUT Input = { 0 };
@@ -55,17 +56,18 @@ void MouseRightClick()
 
 void KeyActionDown(int key)
 {
-    INPUT keyType = { 0 };
-    keyType.type = INPUT_KEYBOARD;
-    keyType.ki.wVk = key;
-    SendInput(1, &keyType, sizeof(INPUT)); // Send KeyDown
+    INPUT Input = { 0 };
+    Input.type = INPUT_KEYBOARD;
+    Input.ki.wVk = key;
+    SendInput(1, &Input, sizeof(INPUT)); // Send KeyDown
 }
+
 void KeyActionUp(int key)
 {
-    INPUT keyType = { 0 };
-    keyType.type = INPUT_KEYBOARD;
-    keyType.ki.wVk = key;
-    keyType.ki.dwFlags = KEYEVENTF_KEYUP;
-    SendInput(1, &keyType, sizeof(INPUT)); // Send KeyUp
+    INPUT Input = { 0 };
+    Input.type = INPUT_KEYBOARD;
+    Input.ki.wVk = key;
+    Input.ki.dwFlags = KEYEVENTF_KEYUP;
+    SendInput(1, &Input, sizeof(INPUT)); // Send KeyUp
 }
 #endif

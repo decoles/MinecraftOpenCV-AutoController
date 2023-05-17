@@ -24,7 +24,7 @@ vector<string> load_class_list(string val)
 void load_net(dnn::Net& net, bool is_cuda, string modelName)
 {
     auto result = dnn::readNet(modelName);
-    if (is_cuda) //In case I want to use cpu later
+    if (is_cuda) //In case I want to use cpu later (I WONT LOL)
     {
         result.setPreferableBackend(dnn::DNN_BACKEND_CUDA);
         result.setPreferableTarget(dnn::DNN_TARGET_CUDA);
@@ -32,7 +32,7 @@ void load_net(dnn::Net& net, bool is_cuda, string modelName)
     net = result;
 }
 
-//Format images for processing 640x640
+//Format images for processing 640x640 (negates resizing)
 Mat format_yolov5(const Mat& source) {
     int col = source.cols;
     int row = source.rows;
@@ -42,6 +42,7 @@ Mat format_yolov5(const Mat& source) {
     return result;
 }
 
+//Finds probabilites and outputs the detections size, shape, and name for processing
 void detect(Mat& image, dnn::Net& net, vector<Detection>& output, const vector<string>& className, int dimension) {
     Mat blob;
 
@@ -71,10 +72,12 @@ void detect(Mat& image, dnn::Net& net, vector<Detection>& output, const vector<s
             Mat scores(1, className.size(), CV_32FC1, classes_scores);
             Point class_id;
             double max_class_score;
-            minMaxLoc(scores, 0, &max_class_score, 0, &class_id);
+            //Retrieve highest score and its relevant id
+            minMaxLoc(scores, 0, &max_class_score, 0, &class_id); 
             if (max_class_score > SCORE_THRESHOLD) { //find highest value in scene
                 confidences.push_back(confidence);
                 class_ids.push_back(class_id.x);
+                //Coordinates for generating box size
                 float x = data[0];
                 float y = data[1];
                 float w = data[2];
@@ -88,7 +91,7 @@ void detect(Mat& image, dnn::Net& net, vector<Detection>& output, const vector<s
         }
         data += dimension; //MUST BE OUTPUT SIZE CAN BE FOUND WITH ONLINE MODEL VIEWER
     }
-
+    //push back data for processing later
     vector<int> nms_result;
     dnn::NMSBoxes(boxes, confidences, SCORE_THRESHOLD, NMS_THRESHOLD, nms_result); //Generates all the boxes and where they go
     for (int i = 0; i < nms_result.size(); i++) {

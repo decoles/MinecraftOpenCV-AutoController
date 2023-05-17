@@ -164,6 +164,7 @@
   </ItemGroup>
   <ItemGroup>
     <Text Include="classesMobs.txt" />
+    <Text Include="classesOres.txt" />
     <Text Include="classesTrees.txt" />
   </ItemGroup>
   <ItemGroup>

@@ -1,0 +1,7 @@
+coal
+diamond
+emerald
+gold
+iron
+lapis
+redstone
