@@ -52,7 +52,6 @@ void detectTree(Mat& frame, Net& netBeings, std::vector<cv::Scalar> colors, std:
 void detectLight(Mat& frame);
 void detectOre(Mat& frame, Net& netBeings, std::vector<cv::Scalar> colors, std::vector<std::string> class_list);
 
-
 DWORD WINAPI eatThread(__in LPVOID lpParameter) //performs eating action while doing other tasks
 {
     KeyActionDown(THREE);//Press three key for food
@@ -259,10 +258,6 @@ int main()
 
         //imshow("diff", matDiff);
 
-
-
-  
-        
         matGrayPrev = matGray.clone();
         imshow("Game Overlay", frame);
         counter++;
