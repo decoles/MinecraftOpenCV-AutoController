@@ -49,9 +49,9 @@ void returnMatchTemplate(Mat img, Mat templ, int& food, vector<Rect>& foodOutlin
 void detectBeingsAttack(Mat& frame, Net &net, std::vector<cv::Scalar> colors, std::vector<std::string> class_list, steady_clock::time_point &attack_timer);
 void detectBeingsAvoidance(Mat& frame, Net& net, std::vector<cv::Scalar> colors, std::vector<std::string> class_list);
 void detectBeingsSentry(Mat& frame, Net& net, std::vector<cv::Scalar> colors, std::vector<std::string> class_list);
-void detectTree(Mat& frame, Net& netBeings, std::vector<cv::Scalar> colors, std::vector<std::string> class_list);
+void detectTree(Mat& frame, Net& netBeings, std::vector<cv::Scalar> colors, std::vector<std::string> class_list, steady_clock::time_point& tree_timer);
 void detectLight(Mat& frame);
-void detectOre(Mat& frame, Net& netBeings, std::vector<cv::Scalar> colors, std::vector<std::string> class_list);
+void detectOre(Mat& frame, Net& netBeings, std::vector<cv::Scalar> colors, std::vector<std::string> class_list, steady_clock::time_point& ore_timer);
 
 DWORD WINAPI eatThread(__in LPVOID lpParameter) //performs eating action while doing other tasks
 {
@@ -81,6 +81,8 @@ int main()
     auto FoodTimer = high_resolution_clock::now(); //Timer to feed character
     auto stuckTimer = high_resolution_clock::now();//Determine when to unstuck
     auto AttackTimer = high_resolution_clock::now();//Determine when to stock attacking
+    auto treeTimer = high_resolution_clock::now();//Determine when to unstuck
+    auto oreTimer = high_resolution_clock::now();//Determine when to stock attacking
     unsigned int diffsum, maxdiff;
     double percent_diff;
     Mat matGray, matDiff, matGrayPrev, frame;
@@ -191,13 +193,13 @@ int main()
             else if (CURRENTMODE == MINE)
             {
                 putText(frame, "MINE MODE SELECTED", Point(50, 50), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(255, 255, 255));
-                detectOre(frame, netOre, colors, class_list_ores);
+                detectOre(frame, netOre, colors, class_list_ores, oreTimer);
             }
 
             else if (CURRENTMODE == HARVEST)
             {
                 putText(frame, "HARVEST MODE SELECTED", Point(50, 50), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(255, 255, 255));
-                detectTree(frame, netTrees, colors, class_list_trees);
+                detectTree(frame, netTrees, colors, class_list_trees, treeTimer);
 
             }
             else if(CURRENTMODE == SENTRY)
@@ -501,7 +503,7 @@ void detectLight(Mat& frame)
     }
 }
 
-void detectTree(Mat& frame, Net& net, std::vector<cv::Scalar> colors, std::vector<std::string> class_list)
+void detectTree(Mat& frame, Net& net, std::vector<cv::Scalar> colors, std::vector<std::string> class_list, steady_clock::time_point& tree_timer)
 {
     std::vector<Detection> output;
     detect(frame, net, output, class_list, DIMENSIONTREE);
@@ -532,7 +534,7 @@ void detectTree(Mat& frame, Net& net, std::vector<cv::Scalar> colors, std::vecto
     }
 }
 
-void detectOre(Mat& frame, Net& netOre, std::vector<cv::Scalar> colors, std::vector<std::string> class_list)
+void detectOre(Mat& frame, Net& netOre, std::vector<cv::Scalar> colors, std::vector<std::string> class_list, steady_clock::time_point& ore_timer)
 {
     std::vector<Detection> output;
     detect(frame, netOre, output, class_list, DIMENSIONMINING);
