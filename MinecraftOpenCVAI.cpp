@@ -552,7 +552,7 @@ void detectOre(Mat& frame, Net& netOre, std::vector<cv::Scalar> colors, std::vec
     std::vector<Detection> output;
     detect(frame, netOre, output, class_list, DIMENSIONMINING);
     int detections = output.size();
-    float upperBound = FRAMEHEIGHT - (FRAMEHEIGHT * .50);
+    float upperBound = FRAMEHEIGHT - (FRAMEHEIGHT * .65);
 
     auto currentMineTime = high_resolution_clock::now();
     auto MineElapsedTime = duration_cast<seconds>(currentMineTime - ore_timer).count();
