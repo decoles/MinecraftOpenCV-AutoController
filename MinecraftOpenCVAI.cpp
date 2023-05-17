@@ -508,8 +508,9 @@ void detectTree(Mat& frame, Net& net, std::vector<cv::Scalar> colors, std::vecto
     std::vector<Detection> output;
     detect(frame, net, output, class_list, DIMENSIONTREE);
     int detections = output.size();
-    float upperBound = FRAMEHEIGHT - (FRAMEHEIGHT * .70);
-
+    float upperBound = FRAMEHEIGHT - (FRAMEHEIGHT * .50);
+    auto currentHarvestTime = high_resolution_clock::now();
+    auto HarvestElapsedTime = duration_cast<seconds>(currentHarvestTime - tree_timer).count();
     if(detections != 0){ //Only need one detection at a time doesnt really matter where
         auto box = output[0].box;
         auto classId = output[0].class_id;
@@ -519,10 +520,14 @@ void detectTree(Mat& frame, Net& net, std::vector<cv::Scalar> colors, std::vecto
         circle(frame, Point2i(box.x + box.width / 2, box.y + box.height / 2), 5, Scalar(0, 125, 230), 4, 3); //Center enemy
         circle(frame, Point2i(FRAMEWIDTH / 2, FRAMEHEIGHT / 2), 5, Scalar(0, 125, 230), 4, 3); //Center screen
         cv::putText(frame, class_list[classId].c_str(), cv::Point(box.x, box.y - 5), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0));
+        line(frame, Point(10, upperBound), Point(500, upperBound), Scalar(255, 0, 0), 2, LINE_4);
+        line(frame, Point(10, box.height), Point(500, box.height), Scalar(0, 0, 255), 2, LINE_4);
         if (upperBound < box.height)
+        {
             MouseLeftClick(); //attack
-        else
-            MouseLeftClickUp(); //cancel input
+            tree_timer = currentHarvestTime;
+            KeyActionUp(0x57);
+        }
         if (box.x > FRAMEWIDTH/2)
             MouseMove(1, 0);
         else if (box.x + box.width < FRAMEWIDTH / 2)
@@ -532,6 +537,11 @@ void detectTree(Mat& frame, Net& net, std::vector<cv::Scalar> colors, std::vecto
         else if (box.y + box.height < FRAMEHEIGHT / 2)
             MouseMove(0, -1);
     }
+    if (HarvestElapsedTime >= 4)
+    {
+        MouseLeftClickUp(); //cancel input
+        KeyActionDown(0x57); //walk towards
+    }
 }
 
 void detectOre(Mat& frame, Net& netOre, std::vector<cv::Scalar> colors, std::vector<std::string> class_list, steady_clock::time_point& ore_timer)
@@ -539,10 +549,10 @@ void detectOre(Mat& frame, Net& netOre, std::vector<cv::Scalar> colors, std::vec
     std::vector<Detection> output;
     detect(frame, netOre, output, class_list, DIMENSIONMINING);
     int detections = output.size();
-    float upperBound = FRAMEHEIGHT - (FRAMEHEIGHT * .70);
+    float upperBound = FRAMEHEIGHT - (FRAMEHEIGHT * .50);
 
-    // for (int i = 0; i < detections; ++i)
-    // {
+    auto currentMineTime = high_resolution_clock::now();
+    auto MineElapsedTime = duration_cast<seconds>(currentMineTime - ore_timer).count();
     if (detections != 0) {
         auto box = output[0].box;
         auto classId = output[0].class_id;
@@ -552,13 +562,13 @@ void detectOre(Mat& frame, Net& netOre, std::vector<cv::Scalar> colors, std::vec
         circle(frame, Point2i(box.x + box.width / 2, box.y + box.height / 2), 5, Scalar(0, 125, 230), 4, 3); //Center enemy
         circle(frame, Point2i(FRAMEWIDTH / 2, FRAMEHEIGHT / 2), 5, Scalar(0, 125, 230), 4, 3); //Center screen
         cv::putText(frame, class_list[classId].c_str(), cv::Point(box.x, box.y - 5), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0));
+        line(frame, Point(10, upperBound), Point(500, upperBound), Scalar(255, 0, 0), 2, LINE_4);
+        line(frame, Point(10, box.height), Point(500, box.height), Scalar(0, 0, 255), 2, LINE_4);
         if (upperBound < box.height)
         {
-            MouseLeftClick(); //attack
-        }
-        else
-        {
-            MouseLeftClickUp(); //cancel input
+            MouseLeftClick(); //attack+
+            ore_timer = currentMineTime;
+            KeyActionUp(0x57);
         }
         if (box.x > FRAMEWIDTH / 2)
         {
@@ -576,6 +586,11 @@ void detectOre(Mat& frame, Net& netOre, std::vector<cv::Scalar> colors, std::vec
         {
             MouseMove(0, -1);
         }
+    }
+    if (MineElapsedTime >= 4)
+    {
+        MouseLeftClickUp(); //cancel input
+        KeyActionDown(0x57); //walk towards
     }
 }
 
