@@ -109,6 +109,7 @@ int main()
     //INITAL SIZEING CODE
     frame = returnImage(gameWindowFocus); //initial frame
     cvtColor(frame, frame, COLOR_BGRA2BGR); //Go from 8UC4 to 8UC3
+    //Resize the frame for easier processing
     resize(frame, frame, Size(960, 540), INTER_LINEAR);
 
     
@@ -127,7 +128,8 @@ int main()
 
     while (1)
     {
-        if (GetKeyState('X') & 0x8000 && KeyFlag == true) //Press X key to change working state VERY FINICKY
+        //Press X key to change working state, works once a second
+        if (GetKeyState('X') & 0x8000 && KeyFlag == true) 
         {
             KeyFlag = false;
             if (CURRENTMODE == 5)
@@ -154,8 +156,7 @@ int main()
                 CURRENTKEY = ONE;
                 break;
             }
-            keyThread = CreateThread(NULL, 0, changeCurrentKey, NULL, 0, &dwThreadTWO);
-
+            keyThread = CreateThread(NULL, 0, changeCurrentKey, NULL, 0, &dwThreadTWO); //Changes to the current key
         }
         frame = returnImage(gameWindowFocus);
         // Wait indefinitely for a key press
@@ -169,10 +170,12 @@ int main()
         cvtColor(frame, frame, COLOR_BGRA2BGR); //Go from 8UC4 to 8UC3
         resize(frame, frame, Size(960, 540), INTER_LINEAR);
 
+        //For getting unstuck
         cvtColor(frame, matGray, COLOR_BGR2GRAY);
         absdiff(matGrayPrev, matGray, matDiff);
         diffsum = (unsigned int)sum(matDiff)[0];
         percent_diff = ((double)diffsum / (double)maxdiff) * 100;
+
         if (gameWindowFocus) { //Main window foucs
             if (CURRENTMODE == NONE)
             {
