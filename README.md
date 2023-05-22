@@ -4,7 +4,7 @@ An auto-controller for Minecraft utilizing OpenCV. Features modes like, avoidanc
 # Features
 - Safe Walk
 - Fighting
- ![](https://drive.google.com/file/d/1VGoh6J7OG7AbKQZXp9wYf2lopEHP3ALg/view?usp=share_link)
+ ![](content/ChopWood.gif)
 - Harvesting
 - Mining
 - Sentry
