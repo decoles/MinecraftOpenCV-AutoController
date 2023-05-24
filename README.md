@@ -1,5 +1,5 @@
 # MinecraftOpenCV-AutoController
-An auto-controller for Minecraft utilizing OpenCV. Features modes like, avoidance, running, harvesting, mining, and guarding using trained yolov5s models.
+An auto-controller for Minecraft utilizing OpenCV & OpenCV's Deep Nerual Network Module. Features modes like, avoidance, running, harvesting, mining, and guarding. Detections utilized by trained YoloV5s models converted to ONNX.
 
 # Features
 The program provides some neat features such as...   
