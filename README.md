@@ -53,3 +53,11 @@ The program provides some neat features such as...
 - Iron
 - Lapis
 - Redstone
+
+## Limitations
+- Poor detection at close and at longer ranges
+- Easily looses track of enemies & other detections
+- Cannot fight players
+- Cannot fight most enemies
+- Cannot harvest most trees
+- Realistically can fight 1-2 enemies safely
