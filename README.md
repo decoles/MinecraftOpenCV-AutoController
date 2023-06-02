@@ -61,3 +61,18 @@ The program provides some neat features such as...
 - Cannot fight most enemies
 - Cannot harvest most trees
 - Realistically can fight 1-2 enemies safely
+
+## Tools
+- Visaul Studio 2019
+- Cuda 11.2
+- Cudnn 8.8
+- OpenCV 4.5.5
+
+## System Specs
+- i7 10700k
+- RTX 3070
+- 32 GB DDR4 Ram @ 3200MHz
+- M.2 SSD
+
+
+
